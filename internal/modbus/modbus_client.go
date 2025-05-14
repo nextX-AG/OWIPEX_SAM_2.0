@@ -64,7 +64,15 @@ func (c *Client) Open() error {
 	if c.mbClient == nil {
 		return fmt.Errorf("underlying modbus client (mbClient) is nil, cannot open")
 	}
-	return c.mbClient.Open()
+	fmt.Printf("DEBUG: Attempting to open Modbus connection to %s (BaudRate: %d, DataBits: %d, Parity: %s, StopBits: %d, Timeout: %v)\n",
+		c.Config.URL, c.Config.BaudRate, c.Config.DataBits, c.Config.Parity, c.Config.StopBits, c.Config.Timeout)
+	err := c.mbClient.Open()
+	if err != nil {
+		fmt.Printf("DEBUG: Failed to open Modbus connection: %v\n", err)
+	} else {
+		fmt.Printf("DEBUG: Successfully opened Modbus connection\n")
+	}
+	return err
 }
 
 // ReadHoldingRegisters reads a number of holding registers starting from a given address.
@@ -72,8 +80,15 @@ func (c *Client) ReadHoldingRegisters(slaveID uint8, address uint16, quantity ui
 	if c.mbClient == nil {
 		return nil, fmt.Errorf("modbus client not initialized")
 	}
+	fmt.Printf("DEBUG: Reading %d registers from address 0x%04X from slave ID %d\n", quantity, address, slaveID)
 	c.mbClient.SetUnitId(slaveID) // Set slave ID for this transaction
-	return c.mbClient.ReadRegisters(address, quantity, modbus.HOLDING_REGISTER)
+	registers, err := c.mbClient.ReadRegisters(address, quantity, modbus.HOLDING_REGISTER)
+	if err != nil {
+		fmt.Printf("DEBUG: Error reading registers: %v\n", err)
+		return nil, err
+	}
+	fmt.Printf("DEBUG: Successfully read registers: %v\n", registers)
+	return registers, nil
 }
 
 // Close closes the Modbus connection.
@@ -89,16 +104,15 @@ func (c *Client) Close() error {
 // Connection status is typically inferred from the success or failure of operations or Open().
 // This implementation is a placeholder and may not accurately reflect connection state without an operation.
 func (c *Client) IsConnected() bool {
-    if c.mbClient == nil {
-        return false
-    }
-    // This is a basic check. A robust way would be to see if the underlying client's `conn` is nil,
-    // but that's an internal field. For now, if Open() succeeded without error (or last op was ok),
-    // we might assume it's connected. This is not reliable.
-    // The library expects users to handle errors on operations to detect disconnection.
-    // A pragmatic approach for the SensorManager might be to attempt operations and handle errors,
-    // potentially retrying Open() if an operation suggests disconnection.
-    // For now, if NewClient (which calls Open) didn't return an error for Open, assume connected initially.
-    return true // This is a simplified placeholder.
+	if c.mbClient == nil {
+		return false
+	}
+	// This is a basic check. A robust way would be to see if the underlying client's `conn` is nil,
+	// but that's an internal field. For now, if Open() succeeded without error (or last op was ok),
+	// we might assume it's connected. This is not reliable.
+	// The library expects users to handle errors on operations to detect disconnection.
+	// A pragmatic approach for the SensorManager might be to attempt operations and handle errors,
+	// potentially retrying Open() if an operation suggests disconnection.
+	// For now, if NewClient (which calls Open) didn't return an error for Open, assume connected initially.
+	return true // This is a simplified placeholder.
 }
-

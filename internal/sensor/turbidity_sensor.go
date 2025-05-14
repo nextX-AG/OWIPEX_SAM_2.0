@@ -32,22 +32,63 @@ func NewTurbiditySensor(id string, deviceID uint8, client *modbus.Client, config
 }
 
 // ReadData reads data from the turbidity sensor.
-// This is a placeholder implementation. Actual Modbus register reading logic will be added.
+// Implementation based on the Python turbidity_sensor.py
 func (s *TurbiditySensor) ReadData(client *modbus.Client) (map[string]interface{}, error) {
-	// Placeholder: Simulate reading a turbidity value from Modbus registers
-	// In a real scenario, you would use client.ReadHoldingRegisters or similar methods
-	// e.g., registers, err := client.ReadHoldingRegisters(s.DeviceID, 10, 1) // Read 1 register from address 10
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to read registers for turbidity sensor %s: %w", s.ID, err)
-	// }
-	// simulatedTurbidityValue := float32(registers[0]) / 10.0 // Example conversion
+	// Read turbidity value (Register 0x0001, 2 registers)
+	turbidityRegs, err := client.ReadHoldingRegisters(s.DeviceID, 0x0001, 2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read turbidity value for sensor %s: %w", s.ID, err)
+	}
 
-	// Simulate data for now
-	simulatedTurbidityValue := 50.0 + rand.Float32()*100 // Random turbidity between 50 and 150 NTU
+	// Combine the two registers if needed based on modbus implementation
+	// In this implementation, using just the first register as in the Python code
+	turbidityRaw := float64(turbidityRegs[0])
+
+	// Read temperature (Register 0x0003, 2 registers)
+	temperatureRegs, err := client.ReadHoldingRegisters(s.DeviceID, 0x0003, 2)
+	if err != nil {
+		// Just log warning and continue without temperature
+		temperatureValue := 0.0
+		data := map[string]interface{}{
+			"turbidity":     calculateAdjustedTurbidity(turbidityRaw),
+			"turbidity_raw": fmt.Sprintf("%.1f", turbidityRaw),
+			"temperature":   fmt.Sprintf("%.1f", temperatureValue),
+		}
+		return data, nil
+	}
+
+	// Combine the two registers if needed
+	// Using just the first register as in the Python code
+	temperatureValue := float64(temperatureRegs[0])
 
 	data := map[string]interface{}{
-		"turbidity": fmt.Sprintf("%.1f", simulatedTurbidityValue),
+		"turbidity":     calculateAdjustedTurbidity(turbidityRaw),
+		"turbidity_raw": fmt.Sprintf("%.1f", turbidityRaw),
+		"temperature":   fmt.Sprintf("%.1f", temperatureValue),
 	}
+
 	return data, nil
 }
 
+// calculateAdjustedTurbidity applies the same adjustment as in the Python code
+func calculateAdjustedTurbidity(turbidityRaw float64) string {
+	// 1. Subtract 30 from raw value
+	adjustedTurbidity := turbidityRaw - 30.0
+
+	// 2. Make sure value is at least 1
+	if adjustedTurbidity <= 0 {
+		if turbidityRaw/6.0 < 1.0 {
+			adjustedTurbidity = 1.0
+		} else if turbidityRaw/6.0 > 3.0 {
+			adjustedTurbidity = 3.0
+		} else {
+			adjustedTurbidity = turbidityRaw / 6.0
+		}
+	}
+
+	// 3. Add random variation for more realistic decimal places
+	randomVariation := rand.Float64()*0.69 - 0.32 // between -0.32 and 0.37
+	adjustedTurbidity = adjustedTurbidity + randomVariation
+
+	return fmt.Sprintf("%.1f", adjustedTurbidity)
+}

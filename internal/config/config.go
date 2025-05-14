@@ -7,21 +7,23 @@ import (
 	"log"
 	"os"
 	"strconv"
-//	"time" // Removed unused import
+
+	//	"time" // Removed unused import
 
 	"github.com/joho/godotenv"
 )
 
 // SensorConfig defines the structure for individual sensor configurations
 type SensorConfig struct {
-	ID                string                 `json:"id"`
-	Name              string                 `json:"name"`
-	Type              string                 `json:"type"`
-	DeviceID          int                    `json:"device_id"` // Modbus slave ID
-	Location          string                 `json:"location"`
-	Metadata          map[string]interface{} `json:"metadata"`
-	ReadIntervalSeconds int                  `json:"read_interval_seconds"`
-	Transmission      struct {
+	ID                  string                 `json:"id"`
+	Name                string                 `json:"name"`
+	Type                string                 `json:"type"`
+	DeviceID            int                    `json:"device_id"` // Modbus slave ID
+	Location            string                 `json:"location"`
+	Enabled             bool                   `json:"enabled"` // Determines if the sensor is active
+	Metadata            map[string]interface{} `json:"metadata"`
+	ReadIntervalSeconds int                    `json:"read_interval_seconds"`
+	Transmission        struct {
 		Formats  []string `json:"formats"`
 		Interval int      `json:"interval"` // This seems redundant with ReadIntervalSeconds
 	} `json:"transmission"`
@@ -39,8 +41,8 @@ type RS485Config struct {
 
 // ThingsBoardConfig defines the ThingsBoard MQTT connection parameters
 type ThingsBoardConfig struct {
-	Host       string `json:"host"`
-	Port       int    `json:"port"`
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
 	AccessToken string `json:"access_token"`
 }
 
@@ -100,8 +102,11 @@ func LoadAppConfig(configFilePath string) (*AppConfig, error) {
 		logger.Printf("Successfully loaded .env file from %s", envPath)
 	}
 
-	if val := os.Getenv("RS485_PORT"); val != "" { appConfig.RS485.Port = val; logger.Printf("ENV Override: RS485_PORT=%s", val) }
-	
+	if val := os.Getenv("RS485_PORT"); val != "" {
+		appConfig.RS485.Port = val
+		logger.Printf("ENV Override: RS485_PORT=%s", val)
+	}
+
 	if val := os.Getenv("RS485_BAUDRATE"); val != "" {
 		baud, err := strconv.Atoi(val)
 		if err != nil {
@@ -120,7 +125,10 @@ func LoadAppConfig(configFilePath string) (*AppConfig, error) {
 			logger.Printf("ENV Override: RS485_DATABITS=%d", dbits)
 		}
 	}
-	if val := os.Getenv("RS485_PARITY"); val != "" { appConfig.RS485.Parity = val; logger.Printf("ENV Override: RS485_PARITY=%s", val) }
+	if val := os.Getenv("RS485_PARITY"); val != "" {
+		appConfig.RS485.Parity = val
+		logger.Printf("ENV Override: RS485_PARITY=%s", val)
+	}
 	if val := os.Getenv("RS485_STOPBITS"); val != "" {
 		sbits, err := strconv.Atoi(val)
 		if err != nil {
@@ -140,7 +148,10 @@ func LoadAppConfig(configFilePath string) (*AppConfig, error) {
 		}
 	}
 
-	if val := os.Getenv("RS485_THINGSBOARD_SERVER"); val != "" { appConfig.ThingsBoard.Host = val; logger.Printf("ENV Override: RS485_THINGSBOARD_SERVER=%s", val) }
+	if val := os.Getenv("RS485_THINGSBOARD_SERVER"); val != "" {
+		appConfig.ThingsBoard.Host = val
+		logger.Printf("ENV Override: RS485_THINGSBOARD_SERVER=%s", val)
+	}
 	if val := os.Getenv("RS485_THINGSBOARD_PORT"); val != "" {
 		port, err := strconv.Atoi(val)
 		if err != nil {
@@ -150,7 +161,10 @@ func LoadAppConfig(configFilePath string) (*AppConfig, error) {
 			logger.Printf("ENV Override: RS485_THINGSBOARD_PORT=%d", port)
 		}
 	}
-	if val := os.Getenv("RS485_ACCESS_TOKEN"); val != "" { appConfig.ThingsBoard.AccessToken = val; logger.Printf("ENV Override: RS485_ACCESS_TOKEN=%s", val) }
+	if val := os.Getenv("RS485_ACCESS_TOKEN"); val != "" {
+		appConfig.ThingsBoard.AccessToken = val
+		logger.Printf("ENV Override: RS485_ACCESS_TOKEN=%s", val)
+	}
 
 	// Load sensor configurations from the specified JSON file (appConfig.Sensors might have been populated by a main config JSON already)
 	// If appConfig.Sensors is empty and a specific sensors.json path is given (or default), load it.
@@ -180,4 +194,3 @@ func LoadSensorDefinitions(filePath string) ([]SensorConfig, error) {
 	}
 	return sensors, nil
 }
-

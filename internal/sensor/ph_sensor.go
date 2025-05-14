@@ -2,7 +2,6 @@ package sensor
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"owipex_reader/internal/modbus"
@@ -32,25 +31,30 @@ func NewPHSensor(id string, deviceID uint8, client *modbus.Client, config map[st
 }
 
 // ReadData reads data from the pH sensor.
-// This is a placeholder implementation. Actual Modbus register reading logic will be added.
+// Implementation based on the Python ph_sensor.py
 func (s *PHSensor) ReadData(client *modbus.Client) (map[string]interface{}, error) {
-	// Placeholder: Simulate reading a pH value and temperature from Modbus registers
-	// In a real scenario, you would use client.ReadHoldingRegisters or similar methods
-	// e.g., registers, err := client.ReadHoldingRegisters(s.DeviceID, 0, 2) // Read 2 registers from address 0
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to read registers for pH sensor %s: %w", s.ID, err)
-	// }
-	// simulatedPHValue := float32(registers[0]) / 100.0 // Example conversion
-	// simulatedTempValue := float32(registers[1]) / 10.0  // Example conversion
+	// Read PH value (Register 0x0001, 2 registers)
+	phRegs, err := client.ReadHoldingRegisters(s.DeviceID, 0x0001, 2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read pH value for sensor %s: %w", s.ID, err)
+	}
 
-	// Simulate data for now
-	simulatedPHValue := 6.5 + rand.Float32() // Random pH between 6.5 and 7.5
-	simulatedTempValue := 20.0 + rand.Float32()*5 // Random temp between 20 and 25
+	// Use the first register as the pH value (same as in Python)
+	phValue := float64(phRegs[0])
+
+	// Read temperature (Register 0x0003, 2 registers)
+	tempRegs, err := client.ReadHoldingRegisters(s.DeviceID, 0x0003, 2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read temperature for sensor %s: %w", s.ID, err)
+	}
+
+	// Use the first register as the temperature value (same as in Python)
+	temperature := float64(tempRegs[0])
 
 	data := map[string]interface{}{
-		"ph":          fmt.Sprintf("%.2f", simulatedPHValue),
-		"temperature": fmt.Sprintf("%.1f", simulatedTempValue),
+		"ph":          fmt.Sprintf("%.2f", phValue),
+		"temperature": fmt.Sprintf("%.1f", temperature),
 	}
+
 	return data, nil
 }
-

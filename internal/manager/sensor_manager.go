@@ -14,16 +14,16 @@ import (
 
 // SensorManager manages all sensors and their readings.
 type SensorManager struct {
-	configPath     string
-	appConfig      *config.AppConfig
-	sensors        map[string]sensor.Sensor
-	modbusClient   *modbus.Client
-	logger         *log.Logger
-	stopChan       chan struct{}
-	wg             sync.WaitGroup
-	busLock        sync.Mutex
-	lastCommTime   time.Time
-	debounceTime   time.Duration
+	configPath      string
+	appConfig       *config.AppConfig
+	sensors         map[string]sensor.Sensor
+	modbusClient    *modbus.Client
+	logger          *log.Logger
+	stopChan        chan struct{}
+	wg              sync.WaitGroup
+	busLock         sync.Mutex
+	lastCommTime    time.Time
+	debounceTime    time.Duration
 	thingsboardChan chan map[string]interface{} // Channel to send data to ThingsBoard
 }
 
@@ -49,13 +49,13 @@ func NewSensorManager(configPath string, tbChan chan map[string]interface{}) (*S
 	}
 
 	sm := &SensorManager{
-		configPath:     configPath,
-		appConfig:      appCfg,
-		sensors:        make(map[string]sensor.Sensor),
-		modbusClient:   mbClient, 
-		logger:         logger,
-		stopChan:       make(chan struct{}),
-		debounceTime:   500 * time.Millisecond, 
+		configPath:      configPath,
+		appConfig:       appCfg,
+		sensors:         make(map[string]sensor.Sensor),
+		modbusClient:    mbClient,
+		logger:          logger,
+		stopChan:        make(chan struct{}),
+		debounceTime:    500 * time.Millisecond,
 		thingsboardChan: tbChan,
 	}
 
@@ -64,18 +64,24 @@ func NewSensorManager(configPath string, tbChan chan map[string]interface{}) (*S
 		return nil, fmt.Errorf("failed to load sensors: %w", errLoadSensors)
 	}
 
-	return sm, nil 
+	return sm, nil
 }
 
 func (sm *SensorManager) loadSensorsFromConfig(sensorConfigs []config.SensorConfig) error {
 	for _, sc := range sensorConfigs {
+		// Skip sensors that are not enabled
+		if !sc.Enabled {
+			sm.logger.Printf("Skipping disabled sensor: %s (Type: %s, DeviceID: %d)", sc.ID, sc.Type, sc.DeviceID)
+			continue
+		}
+
 		var s sensor.Sensor
 
 		sensorSpecificConfig := make(map[string]interface{})
 		sensorSpecificConfig["read_interval_seconds"] = sc.ReadIntervalSeconds
 		sensorSpecificConfig["name"] = sc.Name
 		sensorSpecificConfig["location"] = sc.Location
-		sensorSpecificConfig["metadata"] = sc.Metadata 
+		sensorSpecificConfig["metadata"] = sc.Metadata
 
 		switch sc.Type {
 		case "ph":
@@ -165,8 +171,8 @@ func (sm *SensorManager) run() {
 							sm.logger.Printf("Modbus client is nil, cannot read sensor %s.", currentSensor.GetID())
 							return
 						}
-						
-						if !sm.modbusClient.IsConnected() { 
+
+						if !sm.modbusClient.IsConnected() {
 							sm.logger.Printf("Modbus client not connected. Attempting to (re)open for sensor %s...", currentSensor.GetID())
 							err := sm.modbusClient.Open()
 							if err != nil {
@@ -186,7 +192,7 @@ func (sm *SensorManager) run() {
 							return
 						}
 						sm.logger.Printf("Successfully read sensor %s: %v", currentSensor.GetID(), data)
-						
+
 						formattedData := sm.formatSensorDataForThingsboard(currentSensor, data)
 						sm.thingsboardChan <- formattedData
 
@@ -198,7 +204,7 @@ func (sm *SensorManager) run() {
 }
 
 func (sm *SensorManager) formatSensorDataForThingsboard(s sensor.Sensor, data map[string]interface{}) map[string]interface{} {
-	var sensorCfg config.SensorConfig 
+	var sensorCfg config.SensorConfig
 	for _, cfg := range sm.appConfig.Sensors {
 		if cfg.ID == s.GetID() {
 			sensorCfg = cfg
@@ -214,12 +220,12 @@ func (sm *SensorManager) formatSensorDataForThingsboard(s sensor.Sensor, data ma
 	jsonPayload := map[string]interface{}{
 		fmt.Sprintf("%s_data", s.GetID()): map[string]interface{}{
 			"info": map[string]interface{}{
-				"name":     sensorCfg.Name,
-				"location": sensorCfg.Location,
-				"type":     s.GetType(),
+				"name":      sensorCfg.Name,
+				"location":  sensorCfg.Location,
+				"type":      s.GetType(),
 				"device_id": s.GetDeviceID(),
 			},
-			"metadata": sensorCfg.Metadata, 
+			"metadata":     sensorCfg.Metadata,
 			"measurements": data,
 			"timestamp":    time.Now().UnixNano() / int64(time.Millisecond),
 			"status":       "active",
@@ -231,4 +237,3 @@ func (sm *SensorManager) formatSensorDataForThingsboard(s sensor.Sensor, data ma
 		"json":   jsonPayload,
 	}
 }
-

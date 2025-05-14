@@ -14,6 +14,7 @@
       "device_id": 2,
       "name": "Trübungssensor 1",
       "location": "Kundenbecken",
+      "enabled": false,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
@@ -30,6 +31,7 @@
       "device_id": 22,
       "name": "Trübungssensor 2",
       "location": "Filterbecken",
+      "enabled": false,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
@@ -46,6 +48,7 @@
       "device_id": 1,
       "name": "Radar 1",
       "location": "Kundenbecken",
+      "enabled": true,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
@@ -70,6 +73,7 @@
       "device_id": 40,
       "name": "FT10 FlowSensor",
       "location": "Neutralisation1_in",
+      "enabled": true,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
@@ -86,6 +90,7 @@
       "device_id": 41,
       "name": "FT10 FlowSensor",
       "location": "Neutralisation1_out",
+      "enabled": false,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
@@ -102,6 +107,7 @@
       "device_id": 42,
       "name": "FT10 FlowSensor",
       "location": "Neutralisation2_in",
+      "enabled": false,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
@@ -118,6 +124,7 @@
       "device_id": 43,
       "name": "FT10 FlowSensor",
       "location": "Neutralisation2_out",
+      "enabled": false,
       "transmission": {
         "formats": ["simple", "json"],
         "interval": 20
