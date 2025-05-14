@@ -100,16 +100,19 @@ def install_linux_dependencies():
     # Installiere Go, falls nicht vorhanden
     if not go_installed:
         print("Go ist nicht installiert. Installiere Go...")
-        install_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "golang"], 
-                                 check=False, retry_on_lock=True)
+        # Zuerst versuchen mit golang-go (korrekt für Ubuntu)
+        install_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "golang-go"], 
+                                  check=False, retry_on_lock=True)
         if install_result and install_result.returncode != 0:
-            print("Warnung: Konnte Go nicht installieren. Prüfe, ob es manuell installiert wurde...")
-            # Erneut prüfen, falls Go auf andere Weise installiert wurde
-            go_installed = check_go_installed()
-            if not go_installed:
-                print("Go ist nicht installiert. Das Programm benötigt Go, um ausgeführt zu werden.")
-                print("Bitte installieren Sie Go manuell: sudo apt-get install -y golang")
-                return False
+            # Wenn der erste Versuch fehlschlägt, versuche mit golang (für andere Distributionen)
+            print("Versuche alternative Installation mit 'golang' Paket...")
+            install_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "golang"], 
+                                          check=False, retry_on_lock=True)
+            if install_result and install_result.returncode != 0:
+                # Wenn beide fehlschlagen, versuche snap
+                print("Versuche Installation mit snap...")
+                install_result = run_command(sudo_cmd + ["snap", "install", "go", "--classic"], 
+                                      check=False, retry_on_lock=True)
     
     # Installiere weitere benötigte Pakete, aber nur wenn apt nicht gesperrt ist
     pkg_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "build-essential", "git"], 

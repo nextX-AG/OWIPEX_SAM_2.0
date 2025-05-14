@@ -85,15 +85,32 @@ install_dependencies() {
     # Installiere Go, falls nicht vorhanden
     if [ "$GO_INSTALLED" = false ]; then
         echo "Go ist nicht installiert. Installiere Go..."
-        if ! run_with_lock_detection "$SUDO apt-get install -y golang"; then
-            echo "Warnung: Konnte Go nicht installieren. Prüfe, ob es manuell installiert wurde..."
-            # Erneut prüfen, falls Go auf andere Weise installiert wurde
-            if check_go_installed; then
-                GO_INSTALLED=true
+        
+        # Versuche mit golang-go (korrekt für Ubuntu)
+        if ! run_with_lock_detection "$SUDO apt-get install -y golang-go"; then
+            # Wenn der erste Versuch fehlschlägt, versuche mit golang (für andere Distributionen)
+            echo "Versuche alternative Installation mit 'golang' Paket..."
+            if ! run_with_lock_detection "$SUDO apt-get install -y golang"; then
+                # Wenn beide fehlschlagen, versuche snap
+                echo "Versuche Installation mit snap..."
+                if ! run_with_lock_detection "$SUDO snap install go --classic"; then
+                    echo "Warnung: Konnte Go nicht installieren. Prüfe, ob es manuell installiert wurde..."
+                    # Erneut prüfen, falls Go auf andere Weise installiert wurde
+                    if check_go_installed; then
+                        GO_INSTALLED=true
+                    else
+                        echo "Go ist nicht installiert. Das Programm benötigt Go, um ausgeführt zu werden."
+                        echo "Bitte installieren Sie Go manuell mit einem der folgenden Befehle:"
+                        echo "  sudo apt-get install -y golang-go"
+                        echo "  sudo apt-get install -y golang"
+                        echo "  sudo snap install go --classic"
+                        return 1
+                    fi
+                else
+                    GO_INSTALLED=true
+                fi
             else
-                echo "Go ist nicht installiert. Das Programm benötigt Go, um ausgeführt zu werden."
-                echo "Bitte installieren Sie Go manuell: sudo apt-get install -y golang"
-                return 1
+                GO_INSTALLED=true
             fi
         else
             GO_INSTALLED=true
