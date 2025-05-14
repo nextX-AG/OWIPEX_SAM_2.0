@@ -6,23 +6,79 @@ import subprocess
 import sys
 import platform
 import shutil
+import time
+import re
 
 # Funktionen für die Installation von Abhängigkeiten
-def run_command(command, check=True):
+def run_command(command, check=True, retry_on_lock=True, max_retries=5):
     """Führt einen Shell-Befehl aus und gibt die Ausgabe zurück"""
     print(f"Führe aus: {' '.join(command)}")
-    try:
-        result = subprocess.run(command, check=check, text=True, capture_output=True)
-        if result.stdout:
-            print(result.stdout)
-        return result
-    except subprocess.CalledProcessError as e:
-        print(f"Fehler beim Ausführen des Befehls: {e}")
-        print(e.stdout)
-        print(e.stderr, file=sys.stderr)
-        if check:
-            sys.exit(1)
-        return e
+    
+    # Bei apt-get Befehlen prüfen, ob dpkg gesperrt ist
+    retry_count = 0
+    while retry_count < max_retries:
+        try:
+            result = subprocess.run(command, check=check, text=True, capture_output=True)
+            if result.stdout:
+                print(result.stdout)
+            return result
+        except subprocess.CalledProcessError as e:
+            print(f"Fehler beim Ausführen des Befehls: {e}")
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            
+            # Prüfe auf dpkg lock Fehler
+            if retry_on_lock and ("dpkg" in " ".join(command) or "apt-get" in " ".join(command)):
+                if "Sperre" in e.stderr or "lock" in e.stderr or "E: Konnte Sperre nicht bekommen" in e.stderr:
+                    # Versuche herauszufinden, welcher Prozess die Sperre hält
+                    retry_count += 1
+                    print(f"Paket-Manager ist blockiert. Versuch {retry_count}/{max_retries}")
+                    
+                    # Finde PID des blockierenden Prozesses
+                    match = re.search(r"Prozess (\d+)", e.stderr)
+                    if match:
+                        pid = match.group(1)
+                        print(f"Prozess {pid} blockiert den Paket-Manager.")
+                        
+                        # Zeige Informationen zum blockierenden Prozess
+                        try:
+                            ps_result = subprocess.run(["ps", "-p", pid, "-o", "comm="], 
+                                                    text=True, capture_output=True, check=False)
+                            if ps_result.stdout:
+                                print(f"Blockierender Prozess: {ps_result.stdout.strip()}")
+                        except:
+                            pass
+                    
+                    print("Warte 30 Sekunden und versuche es erneut...")
+                    time.sleep(30)
+                    continue
+            
+            if check:
+                print("Abhängigkeiten müssen manuell installiert werden:")
+                print("  sudo apt-get update")
+                print("  sudo apt-get install -y golang build-essential git")
+                print("  sudo usermod -a -G dialout $USER")
+                if retry_on_lock:
+                    sys.exit(1)
+            return e
+
+    print(f"Maximale Anzahl an Versuchen ({max_retries}) erreicht. Fahre ohne Installation fort.")
+    return None
+
+def check_go_installed():
+    """Prüft, ob Go installiert ist, ohne apt-get zu verwenden"""
+    if shutil.which("go"):
+        try:
+            # Prüfe Go-Version
+            result = subprocess.run(["go", "version"], text=True, capture_output=True, check=False)
+            if result.returncode == 0:
+                print(f"Go ist bereits installiert: {result.stdout.strip()}")
+                return True
+        except:
+            pass
+    return False
 
 def install_linux_dependencies():
     """Installiert benötigte Abhängigkeiten auf Ubuntu/Linux"""
@@ -31,28 +87,48 @@ def install_linux_dependencies():
     # Prüfen, ob wir Root-Rechte haben
     is_root = os.geteuid() == 0
     sudo_cmd = [] if is_root else ["sudo"]
+    
+    go_installed = check_go_installed()
 
-    # Aktualisiere Paketlisten
-    run_command(sudo_cmd + ["apt-get", "update"])
-
+    # Aktualisiere Paketlisten, überspringen wenn dpkg gesperrt ist
+    update_result = run_command(sudo_cmd + ["apt-get", "update"], check=False, retry_on_lock=True)
+    
+    # Wenn Pakete nicht aktualisiert werden können, trotzdem fortfahren
+    if update_result and update_result.returncode != 0:
+        print("Warnung: Konnte Paketlisten nicht aktualisieren, fahre fort...")
+    
     # Installiere Go, falls nicht vorhanden
-    if not shutil.which("go"):
+    if not go_installed:
         print("Go ist nicht installiert. Installiere Go...")
-        run_command(sudo_cmd + ["apt-get", "install", "-y", "golang"])
-
-    # Installiere weitere benötigte Pakete
-    run_command(sudo_cmd + ["apt-get", "install", "-y", "build-essential", "git"])
-
+        install_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "golang"], 
+                                 check=False, retry_on_lock=True)
+        if install_result and install_result.returncode != 0:
+            print("Warnung: Konnte Go nicht installieren. Prüfe, ob es manuell installiert wurde...")
+            # Erneut prüfen, falls Go auf andere Weise installiert wurde
+            go_installed = check_go_installed()
+            if not go_installed:
+                print("Go ist nicht installiert. Das Programm benötigt Go, um ausgeführt zu werden.")
+                print("Bitte installieren Sie Go manuell: sudo apt-get install -y golang")
+                return False
+    
+    # Installiere weitere benötigte Pakete, aber nur wenn apt nicht gesperrt ist
+    pkg_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "build-essential", "git"], 
+                         check=False, retry_on_lock=True)
+    
     # Füge den Benutzer zur Gruppe dialout hinzu (für seriellen Port-Zugriff)
-    run_command(sudo_cmd + ["usermod", "-a", "-G", "dialout", os.environ.get("USER", os.environ.get("USERNAME", ""))])
-    print("WICHTIG: Sie müssen sich möglicherweise neu anmelden, damit die Gruppenmitgliedschaft 'dialout' wirksam wird.")
-
-    # Prüfe Go-Version
-    run_command(["go", "version"])
-
+    # Dies sollte auch funktionieren, wenn apt-get noch gesperrt ist
+    user = os.environ.get("USER", os.environ.get("USERNAME", ""))
+    if user:
+        user_result = run_command(sudo_cmd + ["usermod", "-a", "-G", "dialout", user], check=False)
+        if user_result and user_result.returncode == 0:
+            print("WICHTIG: Sie müssen sich möglicherweise neu anmelden, damit die Gruppenmitgliedschaft 'dialout' wirksam wird.")
+    
     # Installiere Go-Abhängigkeiten
-    print("Installiere Go-Abhängigkeiten...")
-    run_command(["go", "mod", "tidy"])
+    if go_installed:
+        print("Installiere Go-Abhängigkeiten...")
+        run_command(["go", "mod", "tidy"], check=False)
+    
+    return go_installed
 
 # Konfiguration für den Modbus-Reader
 # -----------------------------------
@@ -69,27 +145,48 @@ serial_ports = {
 }
 
 # Installation von Abhängigkeiten auf Linux
+dependencies_installed = True
 if current_os == "Linux":
     try:
-        install_linux_dependencies()
+        dependencies_installed = install_linux_dependencies()
     except Exception as e:
         print(f"Fehler bei der Installation der Abhängigkeiten: {e}")
         print("Installieren Sie die benötigten Pakete manuell: golang, build-essential, git")
         print("Und fügen Sie Ihren Benutzer zur Gruppe 'dialout' hinzu: sudo usermod -a -G dialout $USER")
+        dependencies_installed = False
 
-    # Prüfe, ob der serielle Port existiert
-    port_path = serial_ports['Linux'].replace('rtu://', '')
-    if not os.path.exists(port_path):
-        print(f"WARNUNG: Der konfigurierte serielle Port {port_path} existiert nicht!")
-        print("Verfügbare serielle Ports:")
-        for pattern in ['/dev/ttyS*', '/dev/ttyUSB*', '/dev/ttyACM*']:
-            try:
-                ports = subprocess.check_output(f"ls -l {pattern} 2>/dev/null || echo ''", shell=True).decode().strip()
-                if ports:
-                    print(ports)
-            except:
-                pass
-        print("\nBitte konfigurieren Sie den korrekten Port in diesem Skript.")
+    # Prüfe serielle Ports auf Linux-Systemen
+    # Suche nach verfügbaren seriellen Ports
+    available_ports = []
+    port_patterns = ['/dev/ttyS*', '/dev/ttyUSB*', '/dev/ttyACM*']
+    for pattern in port_patterns:
+        try:
+            found_ports = subprocess.check_output(f"ls -l {pattern} 2>/dev/null || true", shell=True).decode().strip()
+            if found_ports:
+                for line in found_ports.split('\n'):
+                    if 'tty' in line:
+                        port = line.split()[-1]
+                        available_ports.append(port)
+        except:
+            pass
+
+    # Wenn verfügbare Ports gefunden wurden, nehme den ersten
+    if available_ports:
+        print(f"Gefundene serielle Ports: {', '.join(available_ports)}")
+        # Wähle den ersten USB-Port, wenn verfügbar, sonst den ersten in der Liste
+        usb_ports = [p for p in available_ports if 'USB' in p]
+        if usb_ports:
+            port_path = usb_ports[0]
+        else:
+            port_path = available_ports[0]
+        serial_ports['Linux'] = f"rtu://{port_path}"
+        print(f"Verwende seriellen Port: {port_path}")
+    else:
+        # Prüfe, ob der konfigurierte Port existiert
+        port_path = serial_ports['Linux'].replace('rtu://', '')
+        if not os.path.exists(port_path):
+            print(f"WARNUNG: Der konfigurierte serielle Port {port_path} existiert nicht!")
+            print("Keine seriellen Ports gefunden. Bitte schließen Sie ein RS485-Gerät an.")
 
 # Standardmäßig den Port für das aktuelle Betriebssystem verwenden
 serial_port = serial_ports.get(current_os, serial_ports['Darwin'])
@@ -130,6 +227,14 @@ with open(config_file, 'w') as f:
     f.write(config_content)
 
 print(f"Konfigurationsdatei erstellt unter: {config_file}")
+
+if not dependencies_installed:
+    print("Abhängigkeiten nicht vollständig installiert. Das Programm kann möglicherweise nicht korrekt starten.")
+    user_input = input("Möchten Sie dennoch fortfahren? (j/n): ")
+    if user_input.lower() not in ['j', 'ja', 'y', 'yes']:
+        print("Abbruch.")
+        sys.exit(1)
+
 print("Starte Modbus-Reader...")
 
 # Umgebungsvariable setzen und den Go-Modbus-Reader starten
