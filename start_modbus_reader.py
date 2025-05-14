@@ -10,15 +10,18 @@ import time
 import re
 
 # Funktionen für die Installation von Abhängigkeiten
-def run_command(command, check=True, retry_on_lock=True, max_retries=5):
+def run_command(command, check=True, retry_on_lock=True, max_retries=5, shell=False):
     """Führt einen Shell-Befehl aus und gibt die Ausgabe zurück"""
-    print(f"Führe aus: {' '.join(command)}")
+    print(f"Führe aus: {' '.join(command) if not shell else command}")
     
     # Bei apt-get Befehlen prüfen, ob dpkg gesperrt ist
     retry_count = 0
     while retry_count < max_retries:
         try:
-            result = subprocess.run(command, check=check, text=True, capture_output=True)
+            if shell:
+                result = subprocess.run(command, check=check, text=True, capture_output=True, shell=True)
+            else:
+                result = subprocess.run(command, check=check, text=True, capture_output=True)
             if result.stdout:
                 print(result.stdout)
             return result
@@ -30,7 +33,7 @@ def run_command(command, check=True, retry_on_lock=True, max_retries=5):
                 print(result.stderr, file=sys.stderr)
             
             # Prüfe auf dpkg lock Fehler
-            if retry_on_lock and ("dpkg" in " ".join(command) or "apt-get" in " ".join(command)):
+            if retry_on_lock and not shell and ("dpkg" in " ".join(command) or "apt-get" in " ".join(command)):
                 if "Sperre" in e.stderr or "lock" in e.stderr or "E: Konnte Sperre nicht bekommen" in e.stderr:
                     # Versuche herauszufinden, welcher Prozess die Sperre hält
                     retry_count += 1
@@ -58,7 +61,7 @@ def run_command(command, check=True, retry_on_lock=True, max_retries=5):
             if check:
                 print("Abhängigkeiten müssen manuell installiert werden:")
                 print("  sudo apt-get update")
-                print("  sudo apt-get install -y golang build-essential git")
+                print("  sudo apt-get install -y golang-go build-essential git")
                 print("  sudo usermod -a -G dialout $USER")
                 if retry_on_lock:
                     sys.exit(1)
@@ -80,39 +83,103 @@ def check_go_installed():
             pass
     return False
 
+def install_go_manually():
+    """Installiert Go manuell durch Herunterladen und Entpacken des Binärpakets"""
+    print("Installiere Go manuell...")
+    
+    # Go-Version
+    go_version = "1.19.13"
+    go_file = f"go{go_version}.linux-amd64.tar.gz"
+    go_url = f"https://golang.org/dl/{go_file}"
+    
+    # Arbeitsverzeichnis für Downloads
+    temp_dir = "/tmp"
+    download_path = os.path.join(temp_dir, go_file)
+    
+    try:
+        # Herunterladen der Go-Binärdatei
+        print(f"Lade Go {go_version} herunter...")
+        run_command(["wget", "-O", download_path, go_url], check=False)
+        
+        if not os.path.exists(download_path):
+            print(f"Fehler: Konnte Go nicht herunterladen. Datei {download_path} existiert nicht.")
+            return False
+        
+        # Entpacken nach /usr/local
+        print("Entpacke Go nach /usr/local...")
+        is_root = os.geteuid() == 0
+        sudo_cmd = [] if is_root else ["sudo"]
+        
+        # Entferne altes Go-Verzeichnis und entpacke das neue
+        run_command(sudo_cmd + ["rm", "-rf", "/usr/local/go"], check=False)
+        extract_cmd = sudo_cmd + ["tar", "-C", "/usr/local", "-xzf", download_path]
+        if run_command(extract_cmd, check=False).returncode != 0:
+            print("Fehler: Konnte Go nicht entpacken.")
+            return False
+        
+        # PATH setzen
+        print("Setze PATH-Variable...")
+        go_bin_path = "/usr/local/go/bin"
+        
+        # PATH für aktuelle Sitzung setzen
+        os.environ["PATH"] = f"{go_bin_path}:{os.environ.get('PATH', '')}"
+        
+        # PATH permanent setzen
+        profile_path = os.path.expanduser("~/.profile")
+        
+        # Prüfe, ob der Pfad bereits in .profile ist
+        add_path = True
+        if os.path.exists(profile_path):
+            with open(profile_path, "r") as f:
+                if f"/usr/local/go/bin" in f.read():
+                    add_path = False
+        
+        if add_path:
+            with open(profile_path, "a") as f:
+                f.write('\nexport PATH=$PATH:/usr/local/go/bin\n')
+            
+            # Lade .profile neu
+            run_command(["source", os.path.expanduser("~/.profile")], check=False, shell=True)
+        
+        # Prüfe Go-Installation
+        if check_go_installed():
+            return True
+        else:
+            print("Fehler: Go wurde installiert, ist aber nicht im PATH verfügbar.")
+            print("Bitte führen Sie manuell aus:")
+            print("  export PATH=$PATH:/usr/local/go/bin")
+            print("  source ~/.profile")
+            return False
+            
+    except Exception as e:
+        print(f"Fehler bei der manuellen Installation von Go: {e}")
+        return False
+
 def install_linux_dependencies():
     """Installiert benötigte Abhängigkeiten auf Ubuntu/Linux"""
     print("Installiere Abhängigkeiten für Ubuntu/Linux...")
 
+    # Prüfe, ob Go bereits installiert ist
+    go_installed = check_go_installed()
+    if not go_installed:
+        print("Go ist nicht installiert.")
+        
+        # Verwende die manuelle Installation direkt
+        go_installed = install_go_manually()
+        if not go_installed:
+            print("Go konnte nicht installiert werden. Das Programm benötigt Go zum Ausführen.")
+            return False
+    
     # Prüfen, ob wir Root-Rechte haben
     is_root = os.geteuid() == 0
     sudo_cmd = [] if is_root else ["sudo"]
     
-    go_installed = check_go_installed()
-
     # Aktualisiere Paketlisten, überspringen wenn dpkg gesperrt ist
     update_result = run_command(sudo_cmd + ["apt-get", "update"], check=False, retry_on_lock=True)
     
     # Wenn Pakete nicht aktualisiert werden können, trotzdem fortfahren
     if update_result and update_result.returncode != 0:
         print("Warnung: Konnte Paketlisten nicht aktualisieren, fahre fort...")
-    
-    # Installiere Go, falls nicht vorhanden
-    if not go_installed:
-        print("Go ist nicht installiert. Installiere Go...")
-        # Zuerst versuchen mit golang-go (korrekt für Ubuntu)
-        install_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "golang-go"], 
-                                  check=False, retry_on_lock=True)
-        if install_result and install_result.returncode != 0:
-            # Wenn der erste Versuch fehlschlägt, versuche mit golang (für andere Distributionen)
-            print("Versuche alternative Installation mit 'golang' Paket...")
-            install_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "golang"], 
-                                          check=False, retry_on_lock=True)
-            if install_result and install_result.returncode != 0:
-                # Wenn beide fehlschlagen, versuche snap
-                print("Versuche Installation mit snap...")
-                install_result = run_command(sudo_cmd + ["snap", "install", "go", "--classic"], 
-                                      check=False, retry_on_lock=True)
     
     # Installiere weitere benötigte Pakete, aber nur wenn apt nicht gesperrt ist
     pkg_result = run_command(sudo_cmd + ["apt-get", "install", "-y", "build-essential", "git"], 

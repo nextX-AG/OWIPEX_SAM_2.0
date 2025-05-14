@@ -56,6 +56,81 @@ check_go_installed() {
     fi
 }
 
+# Funktion zur manuellen Installation von Go
+install_go_manually() {
+    echo "Installiere Go manuell..."
+    
+    # Go-Version
+    GO_VERSION="1.19.13"
+    GO_FILE="go${GO_VERSION}.linux-amd64.tar.gz"
+    GO_URL="https://golang.org/dl/${GO_FILE}"
+    
+    # Arbeitsverzeichnis für Downloads
+    TEMP_DIR="/tmp"
+    DOWNLOAD_PATH="${TEMP_DIR}/${GO_FILE}"
+    
+    # Herunterladen der Go-Binärdatei
+    echo "Lade Go ${GO_VERSION} herunter..."
+    if ! wget -O "$DOWNLOAD_PATH" "$GO_URL"; then
+        echo "Fehler: Konnte Go nicht herunterladen."
+        return 1
+    fi
+    
+    if [ ! -f "$DOWNLOAD_PATH" ]; then
+        echo "Fehler: Konnte Go nicht herunterladen. Datei $DOWNLOAD_PATH existiert nicht."
+        return 1
+    fi
+    
+    # Entpacken nach /usr/local
+    echo "Entpacke Go nach /usr/local..."
+    
+    # Prüfe, ob wir Root-Rechte haben, wenn nicht, verwende sudo
+    if [ $(id -u) -ne 0 ]; then
+        SUDO="sudo"
+    else
+        SUDO=""
+    fi
+    
+    # Entferne altes Go-Verzeichnis und entpacke das neue
+    $SUDO rm -rf /usr/local/go && $SUDO tar -C /usr/local -xzf "$DOWNLOAD_PATH"
+    if [ $? -ne 0 ]; then
+        echo "Fehler: Konnte Go nicht entpacken."
+        return 1
+    fi
+    
+    # PATH setzen
+    echo "Setze PATH-Variable..."
+    GO_BIN_PATH="/usr/local/go/bin"
+    
+    # PATH für aktuelle Sitzung setzen
+    export PATH="$GO_BIN_PATH:$PATH"
+    
+    # PATH permanent setzen
+    PROFILE_PATH="$HOME/.profile"
+    
+    # Prüfe, ob der Pfad bereits in .profile ist
+    if [ -f "$PROFILE_PATH" ] && grep -q "/usr/local/go/bin" "$PROFILE_PATH"; then
+        echo "PATH bereits in .profile konfiguriert."
+    else
+        echo 'export PATH=$PATH:/usr/local/go/bin' >> "$PROFILE_PATH"
+        echo "PATH zu .profile hinzugefügt."
+    fi
+    
+    # Lade .profile neu
+    source "$PROFILE_PATH" || true
+    
+    # Prüfe Go-Installation
+    if check_go_installed; then
+        return 0
+    else
+        echo "Fehler: Go wurde installiert, ist aber nicht im PATH verfügbar."
+        echo "Bitte führen Sie manuell aus:"
+        echo "  export PATH=$PATH:/usr/local/go/bin"
+        echo "  source ~/.profile"
+        return 1
+    fi
+}
+
 # Erkennung des Betriebssystems
 OS=$(uname -s)
 echo "Erkanntes Betriebssystem: $OS"
@@ -64,6 +139,22 @@ echo "Erkanntes Betriebssystem: $OS"
 install_dependencies() {
     echo "Installiere Abhängigkeiten für Ubuntu/Linux..."
 
+    # Prüfe, ob Go bereits installiert ist
+    GO_INSTALLED=false
+    if check_go_installed; then
+        GO_INSTALLED=true
+    else
+        echo "Go ist nicht installiert."
+        
+        # Verwende die manuelle Installation direkt
+        if install_go_manually; then
+            GO_INSTALLED=true
+        else
+            echo "Go konnte nicht installiert werden. Das Programm benötigt Go zum Ausführen."
+            return 1
+        fi
+    fi
+
     # Prüfe, ob wir Root-Rechte haben, wenn nicht, verwende sudo
     if [ $(id -u) -ne 0 ]; then
         SUDO="sudo"
@@ -71,50 +162,9 @@ install_dependencies() {
         SUDO=""
     fi
 
-    # Prüfe, ob Go bereits installiert ist
-    GO_INSTALLED=false
-    if check_go_installed; then
-        GO_INSTALLED=true
-    fi
-
     # Aktualisiere Paketlisten
     if ! run_with_lock_detection "$SUDO apt-get update"; then
         echo "Warnung: Konnte Paketlisten nicht aktualisieren, fahre fort..."
-    fi
-
-    # Installiere Go, falls nicht vorhanden
-    if [ "$GO_INSTALLED" = false ]; then
-        echo "Go ist nicht installiert. Installiere Go..."
-        
-        # Versuche mit golang-go (korrekt für Ubuntu)
-        if ! run_with_lock_detection "$SUDO apt-get install -y golang-go"; then
-            # Wenn der erste Versuch fehlschlägt, versuche mit golang (für andere Distributionen)
-            echo "Versuche alternative Installation mit 'golang' Paket..."
-            if ! run_with_lock_detection "$SUDO apt-get install -y golang"; then
-                # Wenn beide fehlschlagen, versuche snap
-                echo "Versuche Installation mit snap..."
-                if ! run_with_lock_detection "$SUDO snap install go --classic"; then
-                    echo "Warnung: Konnte Go nicht installieren. Prüfe, ob es manuell installiert wurde..."
-                    # Erneut prüfen, falls Go auf andere Weise installiert wurde
-                    if check_go_installed; then
-                        GO_INSTALLED=true
-                    else
-                        echo "Go ist nicht installiert. Das Programm benötigt Go, um ausgeführt zu werden."
-                        echo "Bitte installieren Sie Go manuell mit einem der folgenden Befehle:"
-                        echo "  sudo apt-get install -y golang-go"
-                        echo "  sudo apt-get install -y golang"
-                        echo "  sudo snap install go --classic"
-                        return 1
-                    fi
-                else
-                    GO_INSTALLED=true
-                fi
-            else
-                GO_INSTALLED=true
-            fi
-        else
-            GO_INSTALLED=true
-        fi
     fi
 
     # Installiere weitere benötigte Pakete
