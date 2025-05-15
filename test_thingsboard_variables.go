@@ -180,8 +180,42 @@ func handleAttributeUpdate(client mqtt.Client, msg mqtt.Message) {
 
 // handleAttributeResponse verarbeitet Antworten auf Attribute-Anfragen
 func handleAttributeResponse(client mqtt.Client, msg mqtt.Message) {
-	logger.Printf("📋 ATTRIBUTE RESPONSE received for topic %s:", msg.Topic())
-	prettyPrintJSON(msg.Payload())
+	topic := msg.Topic()
+	requestID := topic[len("v1/devices/me/attributes/response/"):]
+
+	logger.Printf("📋 ATTRIBUTE RESPONSE received for requestID: %s", requestID)
+
+	// Prüfen, ob die Antwort Daten enthält
+	if len(msg.Payload()) == 0 {
+		logger.Println("Warning: Empty attribute response received")
+		return
+	}
+
+	// Versuchen, die Attributdaten zu parsen
+	var responseData map[string]interface{}
+	if err := json.Unmarshal(msg.Payload(), &responseData); err != nil {
+		logger.Printf("Error parsing attribute response: %v", err)
+		logger.Printf("Raw payload: %s", string(msg.Payload()))
+		return
+	}
+
+	// Spezifische Attribute extrahieren, wenn vorhanden
+	shared, hasShared := responseData["shared"]
+	if hasShared {
+		logger.Println("Shared attributes:")
+		prettyPrintJSON(msg.Payload())
+
+		// Hier können wir spezifische Attribute für unsere Applikation verarbeiten
+		sharedMap, ok := shared.(map[string]interface{})
+		if ok {
+			for key, value := range sharedMap {
+				logger.Printf("  • %s: %v", key, value)
+			}
+		}
+	} else {
+		logger.Println("No shared attributes found in response")
+		prettyPrintJSON(msg.Payload())
+	}
 }
 
 // handleRPCRequest verarbeitet eingehende RPC-Aufrufe
@@ -227,24 +261,39 @@ func handleRPCRequest(client mqtt.Client, msg mqtt.Message) {
 	}
 }
 
-// Verbesserte Attributanfrage mit Timeout
+// Verbesserte Attributanfrage mit Timeout und spezifischen Attributen
 func requestAttributes(client mqtt.Client) {
-	logger.Println("Requesting current shared attributes...")
+	logger.Println("Requesting specific shared attributes...")
+
+	// Prüfe zuerst, ob der Client verbunden ist
+	if !client.IsConnected() {
+		logger.Println("Cannot request attributes - client not connected")
+		return
+	}
+
+	// Dynamische Request-ID mit Zeitstempel
 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
 	requestTopic := fmt.Sprintf("v1/devices/me/attributes/request/%s", requestID)
 
-	// Frage nach allen Attributen
+	// Spezifische Attribute anfragen
 	requestData := map[string]interface{}{
-		"sharedKeys": "", // Leerer String für alle Attribute
+		"sharedKeys": "radarSensor,phSensor,flowSensor,turbiditySensor,relayState",
 	}
 
-	payload, _ := json.Marshal(requestData)
+	payload, err := json.Marshal(requestData)
+	if err != nil {
+		logger.Printf("Error marshalling attribute request: %v", err)
+		return
+	}
+
+	// Mit QoS=1 senden, damit die Nachricht garantiert ankommt
 	token := client.Publish(requestTopic, 1, false, payload)
 
 	if token.WaitTimeout(10*time.Second) && token.Error() != nil {
 		logger.Printf("Error requesting attributes: %v", token.Error())
 	} else {
-		logger.Println("✓ Attribute request sent")
+		logger.Printf("✓ Attribute request sent with requestID: %s", requestID)
+		logger.Printf("  Requested keys: %s", requestData["sharedKeys"])
 	}
 }
 
