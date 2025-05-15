@@ -96,6 +96,21 @@
 - [ ] Stresstests für Langzeitstabilität
 - [ ] Offline-Modus mit Datenpufferung testen
 
+## Bereinigung nach vollständiger Migration
+- [ ] Entfernen der alten Modbus-Implementierung:
+  - [ ] internal/modbus/modbus_client.go
+  - [ ] internal/modbus/modbus_client_test.go
+- [ ] Entfernen der alten Sensor-Implementierungen:
+  - [ ] internal/sensor/ph_sensor.go
+  - [ ] internal/sensor/flow_sensor.go
+  - [ ] internal/sensor/radar_sensor.go
+  - [ ] internal/sensor/turbidity_sensor.go
+  - [ ] internal/sensor/sensor.go
+- [ ] Anpassen des SensorManager:
+  - [ ] internal/manager/sensor_manager.go
+- [ ] Anpassen der ThingsBoard-Integration:
+  - [ ] Anpassungen in internal/thingsboard/thingsboard_client.go
+
 ## Zukünftige Funktionen
 - [ ] Datenpufferung bei ThingsBoard-Verbindungsverlust
 - [ ] Web-Interface für lokale Konfiguration
