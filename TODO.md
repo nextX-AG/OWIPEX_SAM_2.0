@@ -40,10 +40,10 @@
 ## Sensor-Migration
 - [x] Basis-Sensor-Implementierung erstellen (BaseSensor)
 - [x] PH-Sensor in neue Struktur migrieren
-- [ ] Flow-Sensor in neue Struktur migrieren
-- [ ] Radar-Sensor in neue Struktur migrieren
-- [ ] Turbidity-Sensor in neue Struktur migrieren
-- [ ] Konfigurationsbeispiele für alle Sensoren erstellen
+- [x] Flow-Sensor in neue Struktur migrieren
+- [x] Radar-Sensor in neue Struktur migrieren
+- [x] Turbidity-Sensor in neue Struktur migrieren
+- [x] Konfigurationsbeispiele für alle Sensoren erstellen
 - [ ] Alte Sensorimplementierungen entfernen
 
 ## Sensor-Integration (bisheriger Ansatz)
