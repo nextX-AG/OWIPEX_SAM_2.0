@@ -41,53 +41,101 @@ func NewClient(cfg config.ThingsBoardConfig, dataChan <-chan map[string]interfac
 // Connect establishes the MQTT connection to ThingsBoard.
 func (c *Client) Connect() error {
 	opts := mqtt.NewClientOptions()
-	broker := fmt.Sprintf("tcp://%s:%d", c.config.Host, c.config.Port) // Changed c.config.Server to c.config.Host
+	broker := fmt.Sprintf("tcp://%s:%d", c.config.Host, c.config.Port)
 	opts.AddBroker(broker)
-	opts.SetClientID(fmt.Sprintf("go-rs485-reader-%d", time.Now().UnixNano()))
+
+	// Eindeutige Client-ID
+	clientID := fmt.Sprintf("go-rs485-reader-%d", time.Now().UnixNano())
+	opts.SetClientID(clientID)
 	opts.SetUsername(c.config.AccessToken) // ThingsBoard uses Access Token as username
-	// opts.SetPassword("") // No password typically needed when using Access Token as username
+
+	// Verbesserte Verbindungsoptionen für Stabilität
+	opts.SetCleanSession(true)
+	opts.SetOrderMatters(false) // Macht MQTT zuverlässiger
+	opts.SetAutoReconnect(true)
+	opts.SetConnectTimeout(30 * time.Second)
+	opts.SetMaxReconnectInterval(5 * time.Second)
+	opts.SetKeepAlive(60 * time.Second)
+	opts.SetResumeSubs(true) // Wichtig für Reconnection
+	opts.SetWriteTimeout(10 * time.Second)
+	opts.SetPingTimeout(5 * time.Second)
+
+	// Handler für unerwartete Nachrichten
 	opts.SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {
 		c.logger.Printf("Received unexpected message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 	})
+
+	// Verbindung hergestellt Handler
 	opts.OnConnect = func(client mqtt.Client) {
-		c.logger.Println("Connected to ThingsBoard MQTT broker")
+		c.logger.Printf("Connected to ThingsBoard MQTT broker (client ID: %s)", clientID)
 
-		// Subscribe to shared attributes updates
-		if token := client.Subscribe("v1/devices/me/attributes", 1, c.handleAttributeUpdate); token.Wait() && token.Error() != nil {
-			c.logger.Printf("Failed to subscribe to attribute updates: %v", token.Error())
-		} else {
-			c.logger.Println("Subscribed to attribute updates")
-		}
-
-		// Subscribe to shared attributes responses
-		if token := client.Subscribe("v1/devices/me/attributes/response/+", 1, c.handleAttributeResponse); token.Wait() && token.Error() != nil {
-			c.logger.Printf("Failed to subscribe to attribute responses: %v", token.Error())
-		} else {
-			c.logger.Println("Subscribed to attribute responses")
-		}
-
-		// Subscribe to RPC requests
-		if token := client.Subscribe("v1/devices/me/rpc/request/+", 1, c.handleRPCRequest); token.Wait() && token.Error() != nil {
-			c.logger.Printf("Failed to subscribe to RPC requests: %v", token.Error())
-		} else {
-			c.logger.Println("Subscribed to RPC requests")
-		}
-
-		// Request current shared attributes after connection
-		c.requestSharedAttributes()
+		// Mit Verzögerung abonnieren, um dem Server Zeit zu geben
+		go func() {
+			time.Sleep(2 * time.Second)
+			c.setupSubscriptions()
+		}()
 	}
+
+	// Verbindung verloren Handler
 	opts.OnConnectionLost = func(client mqtt.Client, err error) {
 		c.logger.Printf("Connection lost to ThingsBoard MQTT broker: %v", err)
-		// Implement reconnection logic if desired
+		c.logger.Println("Auto-reconnect is enabled and will attempt to restore connection...")
 	}
-	opts.SetAutoReconnect(true)
-	opts.SetMaxReconnectInterval(10 * time.Second)
+
+	// Erneute Verbindung hergestellt Handler
+	opts.OnReconnecting = func(client mqtt.Client, opts *mqtt.ClientOptions) {
+		c.logger.Println("Attempting to reconnect to ThingsBoard MQTT broker...")
+	}
 
 	c.mqttClient = mqtt.NewClient(opts)
+
+	c.logger.Printf("Connecting to MQTT broker at %s", broker)
 	if token := c.mqttClient.Connect(); token.Wait() && token.Error() != nil {
 		return fmt.Errorf("failed to connect to ThingsBoard: %w", token.Error())
 	}
+
+	c.logger.Println("MQTT connection established successfully")
 	return nil
+}
+
+// setupSubscriptions configures all subscriptions for the MQTT client
+func (c *Client) setupSubscriptions() {
+	if !c.mqttClient.IsConnected() {
+		c.logger.Println("Cannot setup subscriptions - client not connected")
+		return
+	}
+
+	c.logger.Println("Setting up MQTT subscriptions...")
+
+	// Subscribe to shared attributes updates
+	token := c.mqttClient.Subscribe("v1/devices/me/attributes", 1, c.handleAttributeUpdate)
+	if token.Wait() && token.Error() != nil {
+		c.logger.Printf("Failed to subscribe to attribute updates: %v", token.Error())
+	} else {
+		c.logger.Println("Subscribed to attribute updates")
+	}
+
+	// Subscribe to shared attributes responses
+	token = c.mqttClient.Subscribe("v1/devices/me/attributes/response/+", 1, c.handleAttributeResponse)
+	if token.Wait() && token.Error() != nil {
+		c.logger.Printf("Failed to subscribe to attribute responses: %v", token.Error())
+	} else {
+		c.logger.Println("Subscribed to attribute responses")
+	}
+
+	// Subscribe to RPC requests
+	token = c.mqttClient.Subscribe("v1/devices/me/rpc/request/+", 1, c.handleRPCRequest)
+	if token.Wait() && token.Error() != nil {
+		c.logger.Printf("Failed to subscribe to RPC requests: %v", token.Error())
+	} else {
+		c.logger.Println("Subscribed to RPC requests")
+	}
+
+	// Warte kurz und frage dann nach den aktuellen shared attributes
+	go func() {
+		time.Sleep(1 * time.Second)
+		c.requestSharedAttributes()
+	}()
 }
 
 // handleAttributeUpdate handles incoming attribute updates
@@ -192,6 +240,12 @@ func (c *Client) respondToRPCRequest(requestID string, response interface{}) {
 
 // requestSharedAttributes requests current values of shared attributes
 func (c *Client) requestSharedAttributes() {
+	if !c.mqttClient.IsConnected() {
+		c.logger.Println("Cannot request attributes - client not connected")
+		return
+	}
+
+	c.logger.Println("Requesting current shared attributes...")
 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
 	requestTopic := fmt.Sprintf("v1/devices/me/attributes/request/%s", requestID)
 
@@ -207,11 +261,18 @@ func (c *Client) requestSharedAttributes() {
 	}
 
 	token := c.mqttClient.Publish(requestTopic, 1, false, payload)
-	go func() {
-		if token.Wait() && token.Error() != nil {
-			c.logger.Printf("Error publishing attribute request: %v", token.Error())
-		}
-	}()
+	success := token.WaitTimeout(5 * time.Second)
+	if !success {
+		c.logger.Println("Timeout waiting for attribute request publication")
+		return
+	}
+
+	if token.Error() != nil {
+		c.logger.Printf("Error publishing attribute request: %v", token.Error())
+		return
+	}
+
+	c.logger.Println("Shared attribute request sent successfully")
 }
 
 // SetAttributeCallback sets a callback function that will be called when shared attributes are updated
