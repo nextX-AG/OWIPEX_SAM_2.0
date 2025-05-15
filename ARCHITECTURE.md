@@ -355,20 +355,20 @@ Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abg
    - Ladeprozess für Konfigurationen in der Service-Schicht
 
 5. **Modbus-Protokoll:**
-   - Neue implementierung `internal/protocol/modbus/` kann die alte ersetzen
+   - Neue implementierung `internal/protocol/modbus/` ersetzt die alte vollständig
    - Vollständig konfigurierbar über JSON
    - Unterstützt alle benötigten Register-Typen und Datenformate
 
+6. **Hauptanwendung:**
+   - Integration der neuen Architektur in die Hauptanwendung abgeschlossen
+   - Die neue Architektur mit dem SensorAdapter ist in der Hauptanwendung (`cmd/main.go`) implementiert
+   - Die alten Implementierungen wurden entfernt
+
 Folgende Schritte sind noch offen:
 
-1. **Hauptanwendung:**
-   - Integration der neuen Architektur in die Hauptanwendung
-   - Ersetzung der alten Sensor- und Modbus-Implementierungen
+1. **ThingsBoard-Integration:**
+   - Weitere Anpassungen der ThingsBoard-Integration an die neue Architektur
+   - Optimierung der Zuordnung von Messwerten zu Telemetriedaten
 
-2. **ThingsBoard-Integration:**
-   - Anpassung der ThingsBoard-Integration an die neue Architektur
-   - Zuordnung von Messwerten zu Telemetriedaten
-
-3. **Bereinigung:**
-   - Entfernen der alten Implementierungen nach vollständigen Tests
-   - Entfernen von duplizierten Code 
+2. **Aktoren-Integration:**
+   - Implementierung und Integration von Aktorgeräten 

@@ -6,7 +6,7 @@
 - [x] Shared Attributes von ThingsBoard empfangen
 - [x] Modulare Sensorarchitektur implementieren
 - [x] Migration der bestehenden Sensoren in die neue Architektur
-- [ ] Integration der neuen Architektur in die Hauptanwendung
+- [x] Integration der neuen Architektur in die Hauptanwendung
 
 ## Hohe Priorität
 - [ ] RPC-Befehle von ThingsBoard empfangen und verarbeiten
@@ -97,17 +97,17 @@
 - [ ] Offline-Modus mit Datenpufferung testen
 
 ## Bereinigung nach vollständiger Migration
-- [ ] Entfernen der alten Modbus-Implementierung:
-  - [ ] internal/modbus/modbus_client.go
-  - [ ] internal/modbus/modbus_client_test.go
-- [ ] Entfernen der alten Sensor-Implementierungen:
-  - [ ] internal/sensor/ph_sensor.go
-  - [ ] internal/sensor/flow_sensor.go
-  - [ ] internal/sensor/radar_sensor.go
-  - [ ] internal/sensor/turbidity_sensor.go
-  - [ ] internal/sensor/sensor.go
-- [ ] Anpassen des SensorManager:
-  - [ ] internal/manager/sensor_manager.go
+- [x] Entfernen der alten Modbus-Implementierung:
+  - [x] internal/modbus/modbus_client.go
+  - [x] internal/modbus/modbus_client_test.go
+- [x] Entfernen der alten Sensor-Implementierungen:
+  - [x] internal/sensor/ph_sensor.go
+  - [x] internal/sensor/flow_sensor.go
+  - [x] internal/sensor/radar_sensor.go
+  - [x] internal/sensor/turbidity_sensor.go
+  - [x] internal/sensor/sensor.go
+- [x] Anpassen des SensorManager:
+  - [x] internal/manager/sensor_manager.go
 - [ ] Anpassen der ThingsBoard-Integration:
   - [ ] Anpassungen in internal/thingsboard/thingsboard_client.go
 

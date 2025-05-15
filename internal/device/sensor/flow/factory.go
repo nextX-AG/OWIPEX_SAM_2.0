@@ -3,6 +3,7 @@ package flow
 import (
 	"fmt"
 
+	"owipex_reader/internal/protocol/factory"
 	"owipex_reader/internal/types"
 )
 
@@ -14,7 +15,7 @@ func CreateFlowSensor(config types.DeviceConfig) (types.Sensor, error) {
 	// Protokoll-Handler konfigurieren
 	if config.Protocol == "modbus" {
 		if modbusConfig, ok := config.Metadata["modbus"].(map[string]interface{}); ok {
-			protocol, err := createProtocolHandler(modbusConfig)
+			protocol, err := factory.CreateProtocolHandler("modbus", modbusConfig)
 			if err != nil {
 				return nil, fmt.Errorf("fehler beim Erstellen des Protokoll-Handlers: %w", err)
 			}
