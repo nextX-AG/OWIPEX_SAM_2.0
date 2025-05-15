@@ -1,37 +1,56 @@
 # owipexRS485GO - Task List
 
-## Priority Tasks
-- [ ] Complete error handling in Modbus client
-- [ ] Add comprehensive logging throughout application
-- [ ] Implement reconnect mechanism for lost RS485 connections
-- [ ] Add healthcheck for sensor availability
-- [ ] Create systemd service file for deployment
+## In Bearbeitung
+- [x] Minimalen ThingsBoard-Client für Tests implementieren
+- [x] Robuste MQTT-Verbindung zu ThingsBoard aufbauen
+- [x] Shared Attributes von ThingsBoard empfangen
+
+## Hohe Priorität
+- [ ] RPC-Befehle von ThingsBoard empfangen und verarbeiten
+- [ ] Robustes Error-Handling für Modbus-Verbindungen implementieren
+- [ ] Reconnect-Mechanismus für verlorene RS485-Verbindungen
+- [ ] Umgang mit Timeouts bei Modbus-Kommunikation
+- [ ] Automatische Wiederherstellung der ThingsBoard-Verbindung
+
+## Sensor-Integration
+- [ ] Konfiguration für Sensoren erweitern (enabled/disabled-Flag)
+- [ ] Radar-Sensor vollständig integrieren
+- [ ] PH-Sensor-Integration abschließen
+- [ ] Flow-Sensor-Integration optimieren
+- [ ] Turbidity-Sensor-Integration verbessern
+- [ ] Kalibrierungsfunktionen für Sensoren implementieren
+
+## ThingsBoard-Integration
+- [ ] Verbesserter Umgang mit Shared Attributes
+- [ ] RPC-Kommandos für alle Sensoren implementieren
+- [ ] Dashboard-Integration mit Echtzeit-Updates
+- [ ] Alarmfunktionen in ThingsBoard konfigurieren
+- [ ] Statusüberwachung der Geräte implementieren
+
+## Deployment & Stabilität
+- [ ] Systemd-Service-Datei erstellen
+- [ ] Auto-Start beim Boot konfigurieren
+- [ ] Automatische Abhängigkeitsinstallation verbessern
+- [ ] Logging-System mit Rotation implementieren
+- [ ] Watchdog für Neustarts bei Problemen
+
+## Dokumentation
+- [ ] Systemarchitektur dokumentieren (ARCHITECTURE.md)
+- [ ] Installationsanleitung vervollständigen
+- [ ] Fehlerbehebungshandbuch erstellen
+- [ ] Konfigurationsoptionen dokumentieren
+- [ ] ThingsBoard-Setup-Anleitung schreiben
 
 ## Testing
-- [ ] Add integration tests for full system
-- [ ] Complete unit tests for sensor manager
-- [ ] Add benchmarks for critical code paths
-- [ ] Create mock ThingsBoard server for testing
+- [ ] Umfassende Tests für Modbus-Kommunikation
+- [ ] Tests für MQTT-Verbindung zu ThingsBoard
+- [ ] End-to-End-Tests mit simulierten Sensoren
+- [ ] Stresstests für Langzeitstabilität
+- [ ] Offline-Modus mit Datenpufferung testen
 
-## Documentation
-- [ ] Complete API documentation
-- [ ] Document deployment process
-- [ ] Create troubleshooting guide
-- [ ] Add comments to complex code sections
-
-## Features
-- [ ] Implement data buffering when ThingsBoard is unreachable
-- [ ] Add sensor calibration interface
-- [ ] Create dashboard for sensor readings
-- [ ] Add support for MQTT protocol option
-- [ ] Implement secure connection support
-
-## Optimization
-- [ ] Optimize memory usage for long-running processes
-- [ ] Review and optimize CPU usage
-- [ ] Implement more efficient polling strategies
-
-## Maintenance
-- [ ] Set up CI/CD pipeline
-- [ ] Create Docker container for easy deployment
-- [ ] Add version management system 
+## Zukünftige Funktionen
+- [ ] Datenpufferung bei ThingsBoard-Verbindungsverlust
+- [ ] Web-Interface für lokale Konfiguration
+- [ ] Verschlüsselte MQTT-Verbindung zu ThingsBoard
+- [ ] Unterstützung für weitere Sensortypen
+- [ ] Remote-Update-Mechanismus implementieren 
