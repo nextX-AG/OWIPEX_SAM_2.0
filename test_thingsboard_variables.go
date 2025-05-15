@@ -23,7 +23,7 @@ type ThingsBoardConfig struct {
 }
 
 func main() {
-	logger.Println("Starting ThingsBoard Variables Test Tool")
+	logger.Println("Starting MINIMAL ThingsBoard MQTT Client")
 
 	// Konfiguration aus Umgebungsvariablen oder Standardwerten
 	config := ThingsBoardConfig{
@@ -35,317 +35,123 @@ func main() {
 	logger.Printf("Connecting to ThingsBoard at %s:%d with token: %s",
 		config.Host, config.Port, config.AccessToken)
 
-	// Verbesserte MQTT-Optionen
+	// Extremes Minimal-Setup für MQTT
 	opts := mqtt.NewClientOptions()
 	broker := fmt.Sprintf("tcp://%s:%d", config.Host, config.Port)
 	opts.AddBroker(broker)
 
-	// Eindeutige Client-ID mit Hostname und Prozess-ID für bessere Identifikation
+	// Client-ID (kurz und identifizierbar)
 	hostname, _ := os.Hostname()
-	clientID := fmt.Sprintf("tb-test-%s-%d", hostname, os.Getpid())
+	shortID := fmt.Sprintf("%d", time.Now().Unix()%1000) // Kurze ID
+	clientID := fmt.Sprintf("tb-minimal-%s-%s", hostname, shortID)
 	opts.SetClientID(clientID)
 	opts.SetUsername(config.AccessToken)
 
-	// Verbesserte Verbindungsoptionen
+	// Reduzierte Verbindungsoptionen
 	opts.SetCleanSession(true)
-	opts.SetOrderMatters(false)
+	opts.SetConnectTimeout(10 * time.Second)
+	opts.SetKeepAlive(30 * time.Second)
+	opts.SetWriteTimeout(5 * time.Second)
 	opts.SetAutoReconnect(true)
-	opts.SetConnectTimeout(20 * time.Second)
-	opts.SetMaxReconnectInterval(10 * time.Second)
-	opts.SetKeepAlive(30 * time.Second) // Reduzierte KeepAlive für schnellere Erkennung von Verbindungsproblemen
-	opts.SetResumeSubs(false)           // Ändere zu false, um Probleme mit abgebrochenen Abonnements zu vermeiden
-	opts.SetWriteTimeout(10 * time.Second)
-	opts.SetPingTimeout(5 * time.Second)
+	opts.SetMaxReconnectInterval(5 * time.Second)
 
-	// Kritische Konfiguration für Verbindungsstabilität
-	opts.SetConnectionLostHandler(func(client mqtt.Client, err error) {
-		logger.Printf("Connection lost: %v. Auto-reconnect is enabled.", err)
-		// Wichtig: Verzögere weitere Aktionen, um dem Client Zeit zur Wiederverbindung zu geben
+	// WICHTIG: Deaktiviere Nachrichtenwiederherstellung
+	opts.SetResumeSubs(false)
+	opts.SetOrderMatters(false)
+
+	// Einfache Connection-Handler
+	opts.OnConnect = func(client mqtt.Client) {
+		logger.Printf("Connected to ThingsBoard (ID: %s)", clientID)
+
+		// ⚠️ SEHR WICHTIG: Auf keinen Fall sofort subscriben oder andere Aktionen ausführen
+		// Warte mind. 2 Sekunden zur Stabilisierung der Verbindung
 		time.Sleep(2 * time.Second)
-	})
 
-	// Verbesserte OnConnect-Handler
-	connectHandler := func(client mqtt.Client) {
-		logger.Printf("Connected to ThingsBoard MQTT broker (client ID: %s)", clientID)
-
-		// Wichtig: Gib dem Broker Zeit, die Verbindung vollständig aufzubauen
-		time.Sleep(1 * time.Second)
-
-		// Mit Verzögerung abonnieren und Fehler besser behandeln
-		go func() {
-			// Mehr Zeit zwischen Verbindung und Subscription
-			time.Sleep(2 * time.Second)
-
-			// Reihenfolge: Erst RPC, dann Attribute
-			subscribeToRPC(client)
-			time.Sleep(500 * time.Millisecond)
-			subscribeToAttributes(client)
-			time.Sleep(500 * time.Millisecond)
-
-			// Erst nach erfolgreichen Subscriptions Attribute anfragen
-			requestAttributes(client)
-		}()
-	}
-	opts.OnConnect = connectHandler
-
-	// Default handler für unerwartete Nachrichten
-	opts.SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {
-		logger.Printf("Received unexpected message from topic %s: %s", msg.Topic(), string(msg.Payload()))
-	})
-
-	// Client erstellen und verbinden mit Wiederholungslogik
-	client := mqtt.NewClient(opts)
-
-	// Timeout-Handler für Verbindung
-	connectSuccess := make(chan bool, 1)
-	go func() {
-		retryCount := 0
-		maxRetries := 5
-
-		for retryCount < maxRetries {
-			logger.Printf("Connecting to ThingsBoard (attempt %d/%d)...", retryCount+1, maxRetries)
-			token := client.Connect()
-			connected := token.WaitTimeout(15 * time.Second)
-
-			if connected && token.Error() == nil {
-				connectSuccess <- true
-				return
-			}
-
-			if !connected {
-				logger.Printf("Connection attempt timed out")
-			} else {
-				logger.Printf("Connection error: %v", token.Error())
-			}
-
-			retryCount++
-			time.Sleep(2 * time.Second)
+		// Nur ein einzelnes Subscription - das einfachste
+		if token := client.Subscribe("v1/devices/me/attributes", 0, handleMessage); token.Wait() && token.Error() != nil {
+			logger.Printf("Failed to subscribe: %v", token.Error())
+		} else {
+			logger.Println("✓ Subscribed to attribute updates")
 		}
+	}
 
-		connectSuccess <- false
+	opts.OnConnectionLost = func(client mqtt.Client, err error) {
+		logger.Printf("Connection lost: %v", err)
+	}
+
+	// Einfacher Default-Handler für alle Nachrichten
+	opts.SetDefaultPublishHandler(handleMessage)
+
+	// Client erstellen und verbinden
+	client := mqtt.NewClient(opts)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		logger.Fatalf("Could not connect to ThingsBoard: %v", token.Error())
+	}
+
+	// Telemetry-Routine (nach erfolgreicher Verbindung)
+	go func() {
+		// Warte, bis die Verbindung stabil ist
+		time.Sleep(5 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				sendSimpleTelemetry(client)
+			}
+		}
 	}()
 
-	// Auf Verbindung warten
-	if success := <-connectSuccess; !success {
-		logger.Fatalf("Failed to connect after multiple attempts")
-	}
-
-	// Regelmäßiger Versand von Telemetriedaten (als Test)
-	go sendPeriodicTelemetry(client)
-
-	// Warten auf Beendigung
-	logger.Println("Test client running. Press Ctrl+C to exit.")
+	// Signal-Handling für sauberes Beenden
+	logger.Println("Client running. Press Ctrl+C to exit.")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
 	logger.Println("Shutting down...")
 	client.Disconnect(250)
-	logger.Println("Test client stopped.")
+	logger.Println("Client stopped.")
 }
 
-// Verbesserte Subscription-Funktionen
-func subscribeToRPC(client mqtt.Client) {
-	token := client.Subscribe("v1/devices/me/rpc/request/+", 1, handleRPCRequest)
-	if token.WaitTimeout(10*time.Second) && token.Error() != nil {
-		logger.Printf("Failed to subscribe to RPC requests: %v", token.Error())
-	} else {
-		logger.Println("✓ Subscribed to RPC requests")
-	}
-}
+// Universeller Message-Handler für alle Nachrichten
+func handleMessage(client mqtt.Client, msg mqtt.Message) {
+	logger.Printf("📨 Message received on topic: %s", msg.Topic())
 
-func subscribeToAttributes(client mqtt.Client) {
-	// 1. Attributes-Änderungen abonnieren
-	token := client.Subscribe("v1/devices/me/attributes", 1, handleAttributeUpdate)
-	if token.WaitTimeout(10*time.Second) && token.Error() != nil {
-		logger.Printf("Failed to subscribe to attribute updates: %v", token.Error())
-	} else {
-		logger.Println("✓ Subscribed to attribute updates")
-	}
-
-	// 2. Responses auf Attribute-Anfragen abonnieren
-	token = client.Subscribe("v1/devices/me/attributes/response/+", 1, handleAttributeResponse)
-	if token.WaitTimeout(10*time.Second) && token.Error() != nil {
-		logger.Printf("Failed to subscribe to attribute responses: %v", token.Error())
-	} else {
-		logger.Println("✓ Subscribed to attribute responses")
-	}
-}
-
-// handleAttributeUpdate verarbeitet eingehende Attribute-Updates
-func handleAttributeUpdate(client mqtt.Client, msg mqtt.Message) {
-	logger.Printf("📢 ATTRIBUTE UPDATE received:")
-	prettyPrintJSON(msg.Payload())
-}
-
-// handleAttributeResponse verarbeitet Antworten auf Attribute-Anfragen
-func handleAttributeResponse(client mqtt.Client, msg mqtt.Message) {
-	topic := msg.Topic()
-	requestID := topic[len("v1/devices/me/attributes/response/"):]
-
-	logger.Printf("📋 ATTRIBUTE RESPONSE received for requestID: %s", requestID)
-
-	// Prüfen, ob die Antwort Daten enthält
+	// Prüfe, ob die Nachricht leer ist
 	if len(msg.Payload()) == 0 {
-		logger.Println("Warning: Empty attribute response received")
+		logger.Println("Empty message received")
 		return
 	}
 
-	// Versuchen, die Attributdaten zu parsen
-	var responseData map[string]interface{}
-	if err := json.Unmarshal(msg.Payload(), &responseData); err != nil {
-		logger.Printf("Error parsing attribute response: %v", err)
-		logger.Printf("Raw payload: %s", string(msg.Payload()))
+	// Versuche, JSON zu parsen
+	var data map[string]interface{}
+	if err := json.Unmarshal(msg.Payload(), &data); err != nil {
+		logger.Printf("Raw data (not valid JSON): %s", string(msg.Payload()))
 		return
 	}
 
-	// Spezifische Attribute extrahieren, wenn vorhanden
-	shared, hasShared := responseData["shared"]
-	if hasShared {
-		logger.Println("Shared attributes:")
-		prettyPrintJSON(msg.Payload())
-
-		// Hier können wir spezifische Attribute für unsere Applikation verarbeiten
-		sharedMap, ok := shared.(map[string]interface{})
-		if ok {
-			for key, value := range sharedMap {
-				logger.Printf("  • %s: %v", key, value)
-			}
-		}
-	} else {
-		logger.Println("No shared attributes found in response")
-		prettyPrintJSON(msg.Payload())
-	}
-}
-
-// handleRPCRequest verarbeitet eingehende RPC-Aufrufe
-func handleRPCRequest(client mqtt.Client, msg mqtt.Message) {
-	logger.Printf("🔄 RPC REQUEST received on topic %s:", msg.Topic())
-	prettyPrintJSON(msg.Payload())
-
-	// Extrahiere request ID aus Topic
-	topic := msg.Topic()
-	requestID := topic[len("v1/devices/me/rpc/request/"):]
-
-	// Parse RPC-Anfrage
-	var rpcData map[string]interface{}
-	if err := json.Unmarshal(msg.Payload(), &rpcData); err != nil {
-		logger.Printf("Error parsing RPC payload: %v", err)
-		return
-	}
-
-	// Extrahiere Methode und Parameter
-	method, ok := rpcData["method"].(string)
-	if !ok {
-		logger.Printf("RPC request missing method field")
-		return
-	}
-
-	params, _ := rpcData["params"].(map[string]interface{})
-	logger.Printf("Method: %s, Params: %v", method, params)
-
-	// Sende Antwort
-	response := map[string]interface{}{
-		"success": true,
-		"result":  fmt.Sprintf("Method '%s' processed by test client", method),
-	}
-
-	responseTopic := fmt.Sprintf("v1/devices/me/rpc/response/%s", requestID)
-	respPayload, _ := json.Marshal(response)
-
-	token := client.Publish(responseTopic, 1, false, respPayload)
-	if token.Wait() && token.Error() != nil {
-		logger.Printf("Error sending RPC response: %v", token.Error())
-	} else {
-		logger.Printf("✓ RPC response sent")
-	}
-}
-
-// Verbesserte Attributanfrage mit Timeout und spezifischen Attributen
-func requestAttributes(client mqtt.Client) {
-	logger.Println("Requesting specific shared attributes...")
-
-	// Prüfe zuerst, ob der Client verbunden ist
-	if !client.IsConnected() {
-		logger.Println("Cannot request attributes - client not connected")
-		return
-	}
-
-	// Dynamische Request-ID mit Zeitstempel
-	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
-	requestTopic := fmt.Sprintf("v1/devices/me/attributes/request/%s", requestID)
-
-	// Nur tatsächlich existierende Attribute anfragen
-	// WICHTIG: Diese müssen in ThingsBoard definiert sein!
-	requestData := map[string]interface{}{
-		"sharedKeys": "testValue,testString,testBoolean",
-	}
-
-	payload, err := json.Marshal(requestData)
-	if err != nil {
-		logger.Printf("Error marshalling attribute request: %v", err)
-		return
-	}
-
-	// Mit QoS=1 senden, damit die Nachricht garantiert ankommt
-	token := client.Publish(requestTopic, 1, false, payload)
-
-	if token.WaitTimeout(10*time.Second) && token.Error() != nil {
-		logger.Printf("Error requesting attributes: %v", token.Error())
-	} else {
-		logger.Printf("✓ Attribute request sent with requestID: %s", requestID)
-		logger.Printf("  Requested keys: %s", requestData["sharedKeys"])
-	}
-}
-
-// sendPeriodicTelemetry sendet regelmäßig Testdaten
-func sendPeriodicTelemetry(client mqtt.Client) {
-	ticker := time.NewTicker(60 * time.Second) // Sende alle 60 Sekunden
-	counter := 0
-
-	for {
-		select {
-		case <-ticker.C:
-			if !client.IsConnected() {
-				logger.Println("Cannot send telemetry - client not connected")
-				continue
-			}
-
-			counter++
-			data := map[string]interface{}{
-				"testValue":  counter,
-				"timestamp":  time.Now().UnixNano() / int64(time.Millisecond),
-				"clientInfo": fmt.Sprintf("TestClient_%d", os.Getpid()),
-			}
-
-			payload, _ := json.Marshal(data)
-			token := client.Publish("v1/devices/me/telemetry", 1, false, payload)
-
-			if token.Wait() && token.Error() != nil {
-				logger.Printf("Error sending telemetry: %v", token.Error())
-			} else {
-				logger.Printf("✓ Test telemetry sent: %v", data)
-			}
-		}
-	}
-}
-
-// prettyPrintJSON gibt JSON-Daten formatiert aus
-func prettyPrintJSON(data []byte) {
-	var obj map[string]interface{}
-	if err := json.Unmarshal(data, &obj); err != nil {
-		logger.Printf("Raw data (not valid JSON): %s", string(data))
-		return
-	}
-
-	prettyJSON, err := json.MarshalIndent(obj, "", "  ")
-	if err != nil {
-		logger.Printf("Error formatting JSON: %v", err)
-		logger.Printf("Raw data: %s", string(data))
-		return
-	}
-
+	// Zeige formatierte Daten
+	prettyJSON, _ := json.MarshalIndent(data, "", "  ")
 	fmt.Println(string(prettyJSON))
+}
+
+// Einfache Telemetrie senden
+func sendSimpleTelemetry(client mqtt.Client) {
+	if !client.IsConnected() {
+		logger.Println("Cannot send telemetry - not connected")
+		return
+	}
+
+	data := map[string]interface{}{
+		"heartbeat": time.Now().Unix(),
+		"status":    "running",
+	}
+
+	payload, _ := json.Marshal(data)
+	if token := client.Publish("v1/devices/me/telemetry", 0, false, payload); token.Wait() && token.Error() != nil {
+		logger.Printf("Failed to send telemetry: %v", token.Error())
+	} else {
+		logger.Println("✓ Telemetry sent")
+	}
 }
 
 // getEnv liest eine Umgebungsvariable oder gibt den Standardwert zurück
