@@ -43,18 +43,142 @@ Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwi
 - Behandelt Timeouts und Verbindungsfehler
 - Unterstützt verschiedene Modbus-Funktionscodes
 
-### 4. Sensor-Management (`internal/sensor/`, `internal/manager/`)
-- **sensor.go** - Basis-Sensor-Interface
-- **sensor_manager.go** - Verwaltet alle Sensoroperationen
-- Spezifische Sensorimplementierungen:
-  - **flow_sensor.go** - Durchflusssensor
-  - **ph_sensor.go** - pH-Wert-Sensor
-  - **radar_sensor.go** - Radarsensor für Füllstandmessung
-  - **turbidity_sensor.go** - Trübungssensor
-- Abstrahiert die verschiedenen Sensortypen
-- Konvertiert Rohwerte aus Modbus-Registern in physikalische Messwerte
-- Implementiert sensorspezifische Kalibrierungen und Berechnungen
-- Verwaltet den Zustand der Sensoren (aktiv/inaktiv)
+### 4. Neue modulare Geräte-Architektur (`internal/device/`)
+
+Die Geräte-Architektur verwendet eine mehrstufige Abstraktion, die Sensortypen, Kommunikationsprotokolle und herstellerspezifische Konfigurationen trennt:
+
+#### 4.1 Basisinterfaces und -strukturen (`internal/device/` und `internal/types/`)
+- **types/device.go** - Definiert grundlegende Interfaces für alle Geräte:
+  - `Device` - Basisinterface für alle Geräte
+  - `ReadableDevice` - Interface für lesende Geräte
+  - `WritableDevice` - Interface für schreibende Geräte
+  - `Sensor` - Spezialisiertes Interface für Sensoren
+  - `Actor` - Spezialisiertes Interface für Aktoren
+  - `HybridDevice` - Interface für Geräte, die lesen und schreiben können
+- **device/registry.go** - Zentrales Register für alle verfügbaren Geräte
+- **device/factory.go** - Factory-Pattern für die Geräteerstellung
+- **device/loader.go** - Funktionen zum Laden von Gerätekonfigurationen
+
+Ein zentraler Aspekt der Architektur ist die Vermeidung zirkulärer Abhängigkeiten durch das `types`-Paket, das alle gemeinsamen Interfaces enthält:
+
+```go
+// Beispiel aus internal/types/device.go
+type Device interface {
+    ID() string
+    Name() string
+    Type() DeviceType
+    Metadata() map[string]interface{}
+    IsEnabled() bool
+    Enable(enabled bool)
+    Close() error
+}
+
+type ReadableDevice interface {
+    Device
+    Read(ctx context.Context) (Reading, error)
+    ReadRaw(ctx context.Context) ([]byte, error)
+    AvailableReadings() []ReadingType
+}
+```
+
+#### 4.2 Sensortypen (`internal/device/sensor/`)
+Jeder Sensortyp hat seine eigene Implementierung mit einer gemeinsamen Basisklasse:
+- **sensor/base.go** - Gemeinsame Basisfunktionalität für alle Sensoren
+- **sensor/ph/ph_sensor.go** - pH-Sensor-Implementierung
+- **sensor/flow/** - Implementierungen für Durchflusssensoren (geplant)
+- **sensor/radar/** - Implementierungen für Radar-Füllstandsensoren (geplant)
+- **sensor/turbidity/** - Implementierungen für Trübungssensoren (geplant)
+
+Diese Implementierungen enthalten die Logik zur Verarbeitung und Interpretation der spezifischen Messwerte, unabhängig vom verwendeten Kommunikationsprotokoll oder Hersteller.
+
+#### 4.3 Aktortypen (`internal/device/actor/`)
+Jeder Aktortyp hat seine eigene Implementierung:
+- **valve/** - Implementierungen für Ventile
+- **pump/** - Implementierungen für Pumpen
+
+#### 4.4 Protokolle (`internal/protocol/`)
+Kommunikationsprotokolle werden vollständig abstrahiert:
+- **types/protocol.go** - Gemeinsame Protokoll-Interfaces
+- **protocol/modbus/client.go** - Modbus-Protokollimplementierung
+
+#### 4.5 Gerätekonfiguration (`config/devices/`)
+Herstellerspezifische Details werden in Konfigurationsdateien ausgelagert:
+```
+config/
+  devices/
+    sensors/
+      ph/
+        hersteller_a.json  // Konfiguration für Hersteller A
+        hersteller_b.json  // Konfiguration für Hersteller B
+      flow/
+        hersteller_c.json
+      ...
+    actors/
+      valve/
+        hersteller_d.json
+      ...
+```
+
+Beispielkonfiguration:
+```json
+{
+  "manufacturer": "HerstellerA",
+  "model": "PH-2000",
+  "type": "ph_sensor",
+  "protocol": "modbus",
+  "modbus": {
+    "slave_id": 1,
+    "registers": {
+      "ph_value": {
+        "address": 100,
+        "length": 2,
+        "data_type": "float32",
+        "byte_order": "big_endian"
+      }
+    }
+  },
+  "calibration": {
+    "ph": {
+      "offset": 0.0,
+      "scale_factor": 1.0
+    }
+  }
+}
+```
+
+#### 4.6 Vorteile der neuen Architektur
+- **Modularer Aufbau:** Klare Trennung zwischen Sensortyp, Kommunikation und Herstellerspezifika
+- **Erweiterbarkeit:** Neue Sensoren durch einfaches Hinzufügen von Konfigurationsdateien
+- **Austauschbarkeit:** Einfacher Austausch von Sensoren durch Ändern der Konfiguration
+- **Konfigurierbarkeit:** Alle herstellerspezifischen Details als Konfiguration, nicht im Code
+- **Typsicherheit:** Strukturierte Datentypen für Messwerte und Befehle
+- **Einfache Wartung:** Bei Änderungen muss meist nur die Konfiguration angepasst werden
+- **Vermeidung zirkulärer Abhängigkeiten:** Durch zentrales Typen-Paket
+- **Testbarkeit:** Klare Interfaces für einfaches Mocking und Unit-Testing
+
+## Migration von der alten zur neuen Architektur
+
+Die Migration der bestehenden Sensoren in die neue Architektur erfolgt schrittweise:
+
+1. **Implementierung der Basisstrukturen:**
+   - Zentrale Typen und Interfaces (`internal/types/`)
+   - Geräteregistry und Factory-Muster (`internal/device/`)
+   - Protokollabstraktion (`internal/protocol/`)
+   
+2. **Migration der Sensortypen:**
+   - Jeder Sensortyp (pH, Flow, Radar, Turbidity) wird einzeln migriert
+   - Für jeden Typ wird ein eigenes Unterpaket mit Typ-spezifischer Logik erstellt
+   - Die Konfiguration wird in JSON-Dateien ausgelagert
+
+3. **Konfigurationsumstellung:**
+   - Migration von hartkodierten Parametern zu konfigurierbaren Werten
+   - Erstellung von Standardkonfigurationen für gängige Sensormodelle
+   - Validierung und Dokumentation der Konfigurationsoptionen
+
+4. **Anpassung der ThingsBoard-Integration:**
+   - Umstellung auf die neue Gerätestruktur
+   - Zuordnung von Messwerten zu Telemetriedaten
+   - Erweiterung der RPC-Funktionen für die neuen Gerätetypen
 
 ### 5. ThingsBoard-Integration
 #### 5.1 Bestehende Implementierung (`internal/thingsboard/`)
@@ -131,10 +255,11 @@ Die Anwendung verwendet mehrere Konfigurationsebenen:
    - ThingsBoard-Verbindungsparameter (Host, Port, Token)
    - Modbus-Parameter (Port, Baudrate, Parity, etc.)
 
-2. **Sensorkonfiguration:**
-   - Liste der verfügbaren Sensoren
-   - Pro Sensor: Typ, Modbus-ID, Register-Adressen, Enabled-Flag
+2. **Gerätekonfiguration:**
+   - Liste der verfügbaren Sensoren und Aktoren
+   - Pro Gerät: Typ, Modbus-ID, Register-Adressen, Konfigurationsparameter
    - Kalibrierungsparameter für jeden Sensor
+   - Herstellerspezifische Details für verschiedene Gerätemodelle
 
 3. **Umgebungsvariablen:**
    - Überschreiben von Konfigurationsparametern
@@ -170,6 +295,7 @@ Das System ist modular aufgebaut und kann einfach erweitert werden:
 - Hinzufügen neuer Sensortypen ohne Änderung des Kerncodex
 - Unterstützung für alternative IoT-Plattformen neben ThingsBoard
 - Erweiterung um zusätzliche Funktionen durch neue Module
+- Einfaches Hinzufügen neuer Gerätemodelle durch Konfigurationsdateien
 
 ## Zukünftige Verbesserungen
 
