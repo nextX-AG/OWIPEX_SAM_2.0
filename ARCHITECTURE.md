@@ -35,13 +35,31 @@ Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwi
 - Stellt Konfigurationen für andere Komponenten bereit
 - Unterstützt Neuladen der Konfiguration zur Laufzeit
 
-### 3. Modbus-Kommunikation (`internal/modbus/`)
+### 3. Modbus-Kommunikation
+
+#### 3.1 Alte Implementierung (`internal/modbus/`)
 - **modbus_client.go** - Handhabt RS485 Modbus-Kommunikation
 - **modbus_client_test.go** - Tests für Modbus-Client
 - Zuständig für die Kommunikation mit den Sensoren über RS485/Modbus-Protokoll
 - Implementiert Lese- und Schreiboperationen für Register
 - Behandelt Timeouts und Verbindungsfehler
 - Unterstützt verschiedene Modbus-Funktionscodes
+
+#### 3.2 Neue modulare Implementierung (`internal/protocol/modbus/`)
+- **client.go** - Implementiert das `types.ProtocolHandler`-Interface
+- **test/test_client.go** - Test-Client für die Modbus-Implementierung
+- Vollständig konfigurierbar über JSON-Dateien
+- Unterstützt verschiedene Register-Typen (Holding, Input, Coil, Discrete)
+- Protokoll-agnostisches Interface für Sensorimplementierungen
+- Thread-sicher durch Mutex-Schutz für alle Operationen
+
+#### 3.3 Protokoll-Factory (`internal/protocol/factory/`)
+- **protocol_factory.go** - Factory für die Erstellung von Protokoll-Handlern
+- Erstellt Protokoll-Handler basierend auf Konfigurationen
+- Unterstützt verschiedene Protokolltypen (derzeit Modbus)
+- Extrahiert Konfigurationsparameter aus JSON-Strukturen
+
+Mit der neuen Implementierung werden Protokolldetails vollständig von der Sensor-Implementierung getrennt, was die Flexibilität und Wartbarkeit erhöht.
 
 ### 4. Neue modulare Geräte-Architektur (`internal/device/`)
 
@@ -155,6 +173,15 @@ Beispielkonfiguration:
 - **Einfache Wartung:** Bei Änderungen muss meist nur die Konfiguration angepasst werden
 - **Vermeidung zirkulärer Abhängigkeiten:** Durch zentrales Typen-Paket
 - **Testbarkeit:** Klare Interfaces für einfaches Mocking und Unit-Testing
+
+#### 4.7 Service-Schicht (`internal/service/`)
+- **device_service.go** - Service zur Verbindung aller Komponenten
+- Lädt Gerätekonfigurationen aus JSON-Dateien
+- Erstellt Sensoren über die Factory-Schicht
+- Verbindet Sensoren mit ihren Protokoll-Handlern
+- Zentrale Komponente für die Geräte-Verwaltung
+
+Die Service-Schicht dient als Bindeglied zwischen der Konfiguration, den Factories und den tatsächlichen Geräten. Sie ermöglicht es, die verschiedenen Komponenten des Systems lose zu koppeln und vermeidet so zirkuläre Abhängigkeiten.
 
 ## Migration von der alten zur neuen Architektur
 
@@ -303,4 +330,45 @@ Das System ist modular aufgebaut und kann einfach erweitert werden:
 - Caching für Sensorwerte implementieren
 - Unterstützung für weitere Sensortypen hinzufügen
 - Datenpufferung bei ThingsBoard-Verbindungsverlust
-- Web-Interface für lokale Konfiguration 
+- Web-Interface für lokale Konfiguration
+
+## Stand der Migration
+
+Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abgeschlossen:
+
+1. **Zentrale Typen und Interfaces:**
+   - Vollständige Implementierung der Basisinterfaces in `internal/types/`
+   - Interface-Definitionen für Geräte, Sensoren und Protokolle
+
+2. **Basiskomponenten:**
+   - Geräteregistry und Factory in `internal/device/`
+   - Sensor-Basis in `internal/device/sensor/base.go`
+   - Protokoll-Handler-Interface und Modbus-Implementierung
+
+3. **Sensor-Typen:**
+   - Migration aller Sensor-Typen abgeschlossen (pH, Flow, Radar, Turbidity)
+   - Spezifische Implementierungen in eigenen Paketen
+   - Factory-Funktionen für alle Sensortypen
+
+4. **Konfiguration:**
+   - JSON-Konfigurationsdateien für alle Sensortypen
+   - Ladeprozess für Konfigurationen in der Service-Schicht
+
+5. **Modbus-Protokoll:**
+   - Neue implementierung `internal/protocol/modbus/` kann die alte ersetzen
+   - Vollständig konfigurierbar über JSON
+   - Unterstützt alle benötigten Register-Typen und Datenformate
+
+Folgende Schritte sind noch offen:
+
+1. **Hauptanwendung:**
+   - Integration der neuen Architektur in die Hauptanwendung
+   - Ersetzung der alten Sensor- und Modbus-Implementierungen
+
+2. **ThingsBoard-Integration:**
+   - Anpassung der ThingsBoard-Integration an die neue Architektur
+   - Zuordnung von Messwerten zu Telemetriedaten
+
+3. **Bereinigung:**
+   - Entfernen der alten Implementierungen nach vollständigen Tests
+   - Entfernen von duplizierten Code 

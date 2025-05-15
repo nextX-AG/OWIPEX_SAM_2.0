@@ -5,13 +5,14 @@
 - [x] Robuste MQTT-Verbindung zu ThingsBoard aufbauen
 - [x] Shared Attributes von ThingsBoard empfangen
 - [x] Modulare Sensorarchitektur implementieren
-- [ ] Migration der bestehenden Sensoren in die neue Architektur
+- [x] Migration der bestehenden Sensoren in die neue Architektur
+- [ ] Integration der neuen Architektur in die Hauptanwendung
 
 ## Hohe Priorität
 - [ ] RPC-Befehle von ThingsBoard empfangen und verarbeiten
-- [ ] Robustes Error-Handling für Modbus-Verbindungen implementieren
-- [ ] Reconnect-Mechanismus für verlorene RS485-Verbindungen
-- [ ] Umgang mit Timeouts bei Modbus-Kommunikation
+- [x] Robustes Error-Handling für Modbus-Verbindungen implementieren
+- [x] Reconnect-Mechanismus für verlorene RS485-Verbindungen
+- [x] Umgang mit Timeouts bei Modbus-Kommunikation
 - [ ] Automatische Wiederherstellung der ThingsBoard-Verbindung
 
 ## ThingsBoard-Kommunikationsstruktur
@@ -31,7 +32,7 @@
 - [x] Konfigurationssystem für herstellerspezifische Sensordetails
 - [x] JSON-Schemata für Gerätekonfigurationen
 - [x] Implementierung der spezifischen Sensortypen (pH)
-- [ ] Implementierung der weiteren Sensortypen (Flow, Radar, Turbidity)
+- [x] Implementierung der weiteren Sensortypen (Flow, Radar, Turbidity)
 - [ ] Implementierung der spezifischen Aktortypen (Ventil, Pumpe, etc.)
 - [x] Protokoll-Abstraktion für verschiedene Kommunikationsarten
 - [x] Einheitliches Messwert- und Befehlssystem
@@ -45,6 +46,13 @@
 - [x] Turbidity-Sensor in neue Struktur migrieren
 - [x] Konfigurationsbeispiele für alle Sensoren erstellen
 - [ ] Alte Sensorimplementierungen entfernen
+
+## System-Integration
+- [ ] Integration der neuen Gerätemodelle in die Hauptanwendung
+- [ ] Ersetzung der alten Modbus-Implementierung durch die neue
+- [ ] Anpassung der ThingsBoard-Integration an die neue Gerätestruktur
+- [ ] End-to-End-Tests mit realen Geräten
+- [ ] Überwachung der Ressourcennutzung
 
 ## Sensor-Integration (bisheriger Ansatz)
 - [ ] Konfiguration für Sensoren erweitern (enabled/disabled-Flag)
