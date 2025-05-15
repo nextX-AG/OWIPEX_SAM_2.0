@@ -56,13 +56,32 @@ Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwi
 - Implementiert sensorspezifische Kalibrierungen und Berechnungen
 - Verwaltet den Zustand der Sensoren (aktiv/inaktiv)
 
-### 5. ThingsBoard-Integration (`internal/thingsboard/`)
+### 5. ThingsBoard-Integration
+#### 5.1 Bestehende Implementierung (`internal/thingsboard/`)
 - **thingsboard_client.go** - Handhabt Kommunikation mit ThingsBoard-Plattform
 - MQTT-basierte Kommunikation mit der ThingsBoard-Plattform
 - Sendet Telemetriedaten von den Sensoren
 - Empfängt Shared Attributes für Konfigurationsänderungen
 - Verarbeitet RPC-Befehle für Fernsteuerung
 - Behandelt Verbindungsabbrüche und Wiederverbindung
+
+#### 5.2 Neue modulare Implementierung (`internal/thingsboardMQTT/`)
+Vollständig modulare Implementierung aller ThingsBoard MQTT-APIs:
+- **types.go** - Gemeinsame Typen und Strukturdefinitionen
+- **client.go** - Basis-Client mit Kern-Funktionalität (Verbindung, Start/Stop)
+- **telemetry.go** - Senden von Telemetriedaten
+- **attributes.go** - Verwaltung von Client- und Shared-Attributen
+- **rpc.go** - Serverseitige und Clientseitige RPC-Funktionen
+- **firmware.go** - API für Firmware-Updates
+- **provisioning.go** - Funktionen für Device Provisioning und Claiming
+- **utils.go** - Hilfsfunktionen
+
+Vorteile der neuen Implementierung:
+- Klare Trennung der Funktionalitäten in separate Module
+- Bessere Wartbarkeit und Erweiterbarkeit
+- Umfassende Fehlerbehandlung und Thread-Sicherheit
+- Vollständige Abdeckung aller ThingsBoard MQTT-APIs
+- Flexibles Konfigurations-System über Options-Pattern
 
 ## Datenfluss
 
