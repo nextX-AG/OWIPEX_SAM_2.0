@@ -275,9 +275,10 @@ func requestAttributes(client mqtt.Client) {
 	requestID := fmt.Sprintf("%d", time.Now().UnixNano())
 	requestTopic := fmt.Sprintf("v1/devices/me/attributes/request/%s", requestID)
 
-	// Spezifische Attribute anfragen
+	// Nur tatsächlich existierende Attribute anfragen
+	// WICHTIG: Diese müssen in ThingsBoard definiert sein!
 	requestData := map[string]interface{}{
-		"sharedKeys": "radarSensor,phSensor,flowSensor,turbiditySensor,relayState",
+		"sharedKeys": "testValue,testString,testBoolean",
 	}
 
 	payload, err := json.Marshal(requestData)
