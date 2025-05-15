@@ -104,15 +104,15 @@ func (c *Client) Close() error {
 // Connection status is typically inferred from the success or failure of operations or Open().
 // This implementation is a placeholder and may not accurately reflect connection state without an operation.
 func (c *Client) IsConnected() bool {
-	if c.mbClient == nil {
-		return false
-	}
-	// This is a basic check. A robust way would be to see if the underlying client's `conn` is nil,
-	// but that's an internal field. For now, if Open() succeeded without error (or last op was ok),
-	// we might assume it's connected. This is not reliable.
-	// The library expects users to handle errors on operations to detect disconnection.
-	// A pragmatic approach for the SensorManager might be to attempt operations and handle errors,
-	// potentially retrying Open() if an operation suggests disconnection.
-	// For now, if NewClient (which calls Open) didn't return an error for Open, assume connected initially.
-	return true // This is a simplified placeholder.
+    if c.mbClient == nil {
+        return false
+    }
+    // This is a basic check. A robust way would be to see if the underlying client's `conn` is nil,
+    // but that's an internal field. For now, if Open() succeeded without error (or last op was ok),
+    // we might assume it's connected. This is not reliable.
+    // The library expects users to handle errors on operations to detect disconnection.
+    // A pragmatic approach for the SensorManager might be to attempt operations and handle errors,
+    // potentially retrying Open() if an operation suggests disconnection.
+    // For now, if NewClient (which calls Open) didn't return an error for Open, assume connected initially.
+    return true // This is a simplified placeholder.
 }
