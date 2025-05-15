@@ -51,6 +51,48 @@ func main() {
 
 	tbClient := thingsboard.NewClient(appCfg.ThingsBoard, dataToThingsBoardChan)
 
+	// Setup attribute callback to handle shared attributes updates
+	tbClient.SetAttributeCallback(func(attributes map[string]interface{}) {
+		logger.Printf("Received shared attributes update: %v", attributes)
+
+		// Handle button status if present
+		if buttonStatus, ok := attributes["buttonStatus"]; ok {
+			logger.Printf("Button status changed: %v", buttonStatus)
+			// Hier kann die Logik für Aktionen basierend auf dem Button-Status implementiert werden
+			// Zum Beispiel, bestimmte Modi aktivieren/deaktivieren
+		}
+
+		// Logging-Level anpassen, wenn vorhanden
+		if loggingLevel, ok := attributes["loggingLevel"]; ok {
+			if level, ok := loggingLevel.(string); ok {
+				logger.Printf("Changing logging level to: %s", level)
+				// Hier kann die Logik zur Anpassung des Logging-Levels implementiert werden
+			}
+		}
+	})
+
+	// Setup RPC callback
+	tbClient.SetRPCCallback(func(method string, params map[string]interface{}) {
+		logger.Printf("Received RPC call: method=%s, params=%v", method, params)
+
+		// Beispiel für die Verarbeitung verschiedener RPC-Methoden
+		switch method {
+		case "setSamplingInterval":
+			if interval, ok := params["interval"].(float64); ok {
+				logger.Printf("Setting sampling interval to: %.0f seconds", interval)
+				// Hier kann die Logik zur Anpassung des Sampling-Intervalls implementiert werden
+			}
+		case "restartDevice":
+			logger.Printf("Received restart command")
+			// Hier kann die Logik für einen Neustart implementiert werden
+		case "forceReconnect":
+			logger.Printf("Forcing reconnect to sensors")
+			// Hier kann die Logik für einen Neuaufbau der Verbindung implementiert werden
+		default:
+			logger.Printf("Unknown RPC method: %s", method)
+		}
+	})
+
 	if err := tbClient.Connect(); err != nil {
 		logger.Printf("Warning: Failed to connect to ThingsBoard: %v. Check Access Token and server details in /etc/owipex/go_reader.env. Proceeding with application start, MQTT will attempt to reconnect.", err)
 		// Allow application to start even if MQTT connection fails initially, as it has auto-reconnect
@@ -76,4 +118,3 @@ func main() {
 	time.Sleep(2 * time.Second)
 	logger.Println("Application shut down gracefully.")
 }
-
