@@ -288,4 +288,4 @@ fi
 echo "Starte Modbus-Reader..."
 
 # Starte den Go-Modbus-Reader
-GO_READER_ENV_PATH="$(pwd)/${CONFIG_FILE}" go run cmd/main.go 
+GO_READER_ENV_PATH="$(pwd)/${CONFIG_FILE}" go run cmd/reader/main.go 

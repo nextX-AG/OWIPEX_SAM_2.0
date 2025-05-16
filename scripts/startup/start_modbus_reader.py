@@ -313,7 +313,7 @@ env["GO_READER_ENV_PATH"] = config_file
 
 try:
     # Go-Programm starten
-    subprocess.run(["go", "run", "cmd/main.go"], env=env, check=True)
+    subprocess.run(["go", "run", "cmd/reader/main.go"], env=env, check=True)
 except KeyboardInterrupt:
     print("\nModbus-Reader wurde durch Benutzer beendet")
 except subprocess.CalledProcessError as e:

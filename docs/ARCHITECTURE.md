@@ -17,17 +17,79 @@ Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwi
                           +-------------------+
 ```
 
+## Neue Projektstruktur
+
+Die Projekt-Ordnerstruktur wurde vollständig überarbeitet, um eine modulare und wartbare Codebasis zu schaffen:
+
+```
+owipexRS485GO/
+├── cmd/                      # Ausführbare Anwendungen
+│   ├── reader/               # Hauptanwendung
+│   └── tools/                # Hilfswerkzeuge, Tests, etc.
+│
+├── internal/                 # Nicht-öffentlicher Code
+│   ├── config/               # Konfigurationslogik
+│   ├── controller/           # Controller-Logik (Steuerungsalgorithmen)
+│   │   ├── flow/             # Durchfluss-Controller
+│   │   ├── ph/               # pH-Wert-Controller
+│   │   └── system/           # Systemsteuerung
+│   │
+│   ├── device/               # Geräteabstraktionen
+│   │   ├── actuator/         # Aktoren (Relais, Ventile, etc.)
+│   │   │   ├── relay/        # Relais-spezifischer Code
+│   │   │   └── valve/        # Ventil-spezifischer Code
+│   │   │
+│   │   └── sensor/           # Sensoren
+│   │       ├── flow/         # Durchflusssensoren
+│   │       ├── ph/           # pH-Sensoren
+│   │       ├── radar/        # Radarsensoren
+│   │       └── turbidity/    # Trübungssensoren
+│   │
+│   ├── hardware/             # Hardware-Abstraktionen
+│   │   ├── gpio/             # GPIO-Schnittstelle
+│   │   └── uart/             # UART-Schnittstelle
+│   │
+│   ├── integration/          # Integration mit externen Plattformen
+│   │   ├── thingsboard/      # ThingsBoard-spezifischer Code
+│   │   │   ├── mqtt/         # MQTT-Kommunikation mit ThingsBoard
+│   │   │   └── rest/         # REST-API-Kommunikation mit ThingsBoard
+│   │   └── other_platform/   # Andere Plattformen (zukünftig)
+│   │
+│   ├── protocol/             # Kommunikationsprotokolle
+│   │   ├── factory/          # Factory für Protokoll-Handler
+│   │   └── modbus/           # Modbus-Implementierung
+│   │
+│   ├── service/              # Anwendungsdienste
+│   │   ├── monitoring/       # Überwachungsdienste
+│   │   └── scheduler/        # Zeitplanungsdienste
+│   │
+│   ├── storage/              # Datenspeicherung
+│   │
+│   └── types/                # Gemeinsame Typen und Interfaces
+│
+├── pkg/                      # Potenziell wiederverwendbare Pakete
+│
+└── scripts/                  # Hilfsskripte für Entwicklung, Deployment, etc.
+```
+
+### Vorteile der neuen Struktur
+
+- **Klare Trennung der Verantwortlichkeiten**: Jeder Ordner hat eine definierte Aufgabe
+- **Erweiterbarkeit**: Neue Module können einfach hinzugefügt werden
+- **Konsistente Begrifflichkeiten**: Controller, Devices, Hardware, Protokolle, etc. sind klar voneinander getrennt
+- **Zukunftssicherheit**: Platz für zukünftige Komponenten wie GPIO, weitere Controller, etc.
+- **Modulare Integration**: Klare Trennung zwischen Plattformen und Kommunikationsprotokollen
+
 ## Hauptkomponenten
 
 ### 1. Command Layer (`cmd/`)
-- **main.go** - Anwendungseinstiegspunkt und übergeordnete Orchestrierung
+- **reader/main.go** - Anwendungseinstiegspunkt und übergeordnete Orchestrierung
 - Initialisiert und koordiniert alle Komponenten
 - Implementiert Hauptschleife für periodisches Polling
 - Verwaltet Ressourcen und Shutdown
 - Behandelt Signale (SIGTERM, SIGINT)
 
-### 2. Konfiguration (`config/`, `internal/config/`)
-- **sensors.json** - Sensordefinitionen und Konfiguration
+### 2. Konfiguration (`internal/config/`)
 - **config.go** - Laden und Verwalten von Konfigurationen
 - **config_test.go** - Tests für Konfigurationsfunktionen
 - Lädt Konfigurationen aus JSON-Dateien und Umgebungsvariablen
@@ -35,17 +97,7 @@ Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwi
 - Stellt Konfigurationen für andere Komponenten bereit
 - Unterstützt Neuladen der Konfiguration zur Laufzeit
 
-### 3. Modbus-Kommunikation
-
-#### 3.1 Alte Implementierung (`internal/modbus/`)
-- **modbus_client.go** - Handhabt RS485 Modbus-Kommunikation
-- **modbus_client_test.go** - Tests für Modbus-Client
-- Zuständig für die Kommunikation mit den Sensoren über RS485/Modbus-Protokoll
-- Implementiert Lese- und Schreiboperationen für Register
-- Behandelt Timeouts und Verbindungsfehler
-- Unterstützt verschiedene Modbus-Funktionscodes
-
-#### 3.2 Neue modulare Implementierung (`internal/protocol/modbus/`)
+### 3. Modbus-Kommunikation (`internal/protocol/modbus/`)
 - **client.go** - Implementiert das `types.ProtocolHandler`-Interface
 - **test/test_client.go** - Test-Client für die Modbus-Implementierung
 - Vollständig konfigurierbar über JSON-Dateien
@@ -53,19 +105,17 @@ Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwi
 - Protokoll-agnostisches Interface für Sensorimplementierungen
 - Thread-sicher durch Mutex-Schutz für alle Operationen
 
-#### 3.3 Protokoll-Factory (`internal/protocol/factory/`)
+### 4. Protokoll-Factory (`internal/protocol/factory/`)
 - **protocol_factory.go** - Factory für die Erstellung von Protokoll-Handlern
 - Erstellt Protokoll-Handler basierend auf Konfigurationen
 - Unterstützt verschiedene Protokolltypen (derzeit Modbus)
 - Extrahiert Konfigurationsparameter aus JSON-Strukturen
 
-Mit der neuen Implementierung werden Protokolldetails vollständig von der Sensor-Implementierung getrennt, was die Flexibilität und Wartbarkeit erhöht.
-
-### 4. Neue modulare Geräte-Architektur (`internal/device/`)
+### 5. Geräte-Architektur (`internal/device/`)
 
 Die Geräte-Architektur verwendet eine mehrstufige Abstraktion, die Sensortypen, Kommunikationsprotokolle und herstellerspezifische Konfigurationen trennt:
 
-#### 4.1 Basisinterfaces und -strukturen (`internal/device/` und `internal/types/`)
+#### 5.1 Basisinterfaces und -strukturen (`internal/device/` und `internal/types/`)
 - **types/device.go** - Definiert grundlegende Interfaces für alle Geräte:
   - `Device` - Basisinterface für alle Geräte
   - `ReadableDevice` - Interface für lesende Geräte
@@ -77,146 +127,35 @@ Die Geräte-Architektur verwendet eine mehrstufige Abstraktion, die Sensortypen,
 - **device/factory.go** - Factory-Pattern für die Geräteerstellung
 - **device/loader.go** - Funktionen zum Laden von Gerätekonfigurationen
 
-Ein zentraler Aspekt der Architektur ist die Vermeidung zirkulärer Abhängigkeiten durch das `types`-Paket, das alle gemeinsamen Interfaces enthält:
-
-```go
-// Beispiel aus internal/types/device.go
-type Device interface {
-    ID() string
-    Name() string
-    Type() DeviceType
-    Metadata() map[string]interface{}
-    IsEnabled() bool
-    Enable(enabled bool)
-    Close() error
-}
-
-type ReadableDevice interface {
-    Device
-    Read(ctx context.Context) (Reading, error)
-    ReadRaw(ctx context.Context) ([]byte, error)
-    AvailableReadings() []ReadingType
-}
-```
-
-#### 4.2 Sensortypen (`internal/device/sensor/`)
+#### 5.2 Sensortypen (`internal/device/sensor/`)
 Jeder Sensortyp hat seine eigene Implementierung mit einer gemeinsamen Basisklasse:
 - **sensor/base.go** - Gemeinsame Basisfunktionalität für alle Sensoren
 - **sensor/ph/ph_sensor.go** - pH-Sensor-Implementierung
-- **sensor/flow/** - Implementierungen für Durchflusssensoren (geplant)
-- **sensor/radar/** - Implementierungen für Radar-Füllstandsensoren (geplant)
-- **sensor/turbidity/** - Implementierungen für Trübungssensoren (geplant)
+- **sensor/flow/** - Implementierungen für Durchflusssensoren
+- **sensor/radar/** - Implementierungen für Radar-Füllstandsensoren
+- **sensor/turbidity/** - Implementierungen für Trübungssensoren
 
-Diese Implementierungen enthalten die Logik zur Verarbeitung und Interpretation der spezifischen Messwerte, unabhängig vom verwendeten Kommunikationsprotokoll oder Hersteller.
-
-#### 4.3 Aktortypen (`internal/device/actor/`)
+#### 5.3 Aktortypen (`internal/device/actuator/`)
 Jeder Aktortyp hat seine eigene Implementierung:
-- **valve/** - Implementierungen für Ventile
-- **pump/** - Implementierungen für Pumpen
+- **actuator/relay/** - Implementierungen für Relais
+- **actuator/valve/** - Implementierungen für Ventile
 
-#### 4.4 Protokolle (`internal/protocol/`)
-Kommunikationsprotokolle werden vollständig abstrahiert:
-- **types/protocol.go** - Gemeinsame Protokoll-Interfaces
-- **protocol/modbus/client.go** - Modbus-Protokollimplementierung
+### 6. Controller (`internal/controller/`)
+- Enthält die Steuerungslogik für verschiedene Teilsysteme
+- **flow/** - Steuerung der Durchflussregelung
+- **ph/** - Steuerung der pH-Wert-Regelung
+- **system/** - Übergeordnete Systemsteuerung
 
-#### 4.5 Gerätekonfiguration (`config/devices/`)
-Herstellerspezifische Details werden in Konfigurationsdateien ausgelagert:
-```
-config/
-  devices/
-    sensors/
-      ph/
-        hersteller_a.json  // Konfiguration für Hersteller A
-        hersteller_b.json  // Konfiguration für Hersteller B
-      flow/
-        hersteller_c.json
-      ...
-    actors/
-      valve/
-        hersteller_d.json
-      ...
-```
+### 7. Hardware-Abstraktion (`internal/hardware/`)
+- **gpio/** - Abstraktion für GPIO-Zugriff
+- **uart/** - Abstraktion für UART-Kommunikation
 
-Beispielkonfiguration:
-```json
-{
-  "manufacturer": "HerstellerA",
-  "model": "PH-2000",
-  "type": "ph_sensor",
-  "protocol": "modbus",
-  "modbus": {
-    "slave_id": 1,
-    "registers": {
-      "ph_value": {
-        "address": 100,
-        "length": 2,
-        "data_type": "float32",
-        "byte_order": "big_endian"
-      }
-    }
-  },
-  "calibration": {
-    "ph": {
-      "offset": 0.0,
-      "scale_factor": 1.0
-    }
-  }
-}
-```
+### 8. Plattform-Integration (`internal/integration/`)
+- **thingsboard/mqtt/** - MQTT-Kommunikation mit ThingsBoard
+- **thingsboard/rest/** - REST-API-Kommunikation mit ThingsBoard (zukünftig)
+- Die Integration-Schicht bietet eine Abstraktion für die Kommunikation mit externen Plattformen
 
-#### 4.6 Vorteile der neuen Architektur
-- **Modularer Aufbau:** Klare Trennung zwischen Sensortyp, Kommunikation und Herstellerspezifika
-- **Erweiterbarkeit:** Neue Sensoren durch einfaches Hinzufügen von Konfigurationsdateien
-- **Austauschbarkeit:** Einfacher Austausch von Sensoren durch Ändern der Konfiguration
-- **Konfigurierbarkeit:** Alle herstellerspezifischen Details als Konfiguration, nicht im Code
-- **Typsicherheit:** Strukturierte Datentypen für Messwerte und Befehle
-- **Einfache Wartung:** Bei Änderungen muss meist nur die Konfiguration angepasst werden
-- **Vermeidung zirkulärer Abhängigkeiten:** Durch zentrales Typen-Paket
-- **Testbarkeit:** Klare Interfaces für einfaches Mocking und Unit-Testing
-
-#### 4.7 Service-Schicht (`internal/service/`)
-- **device_service.go** - Service zur Verbindung aller Komponenten
-- Lädt Gerätekonfigurationen aus JSON-Dateien
-- Erstellt Sensoren über die Factory-Schicht
-- Verbindet Sensoren mit ihren Protokoll-Handlern
-- Zentrale Komponente für die Geräte-Verwaltung
-
-Die Service-Schicht dient als Bindeglied zwischen der Konfiguration, den Factories und den tatsächlichen Geräten. Sie ermöglicht es, die verschiedenen Komponenten des Systems lose zu koppeln und vermeidet so zirkuläre Abhängigkeiten.
-
-## Migration von der alten zur neuen Architektur
-
-Die Migration der bestehenden Sensoren in die neue Architektur erfolgt schrittweise:
-
-1. **Implementierung der Basisstrukturen:**
-   - Zentrale Typen und Interfaces (`internal/types/`)
-   - Geräteregistry und Factory-Muster (`internal/device/`)
-   - Protokollabstraktion (`internal/protocol/`)
-   
-2. **Migration der Sensortypen:**
-   - Jeder Sensortyp (pH, Flow, Radar, Turbidity) wird einzeln migriert
-   - Für jeden Typ wird ein eigenes Unterpaket mit Typ-spezifischer Logik erstellt
-   - Die Konfiguration wird in JSON-Dateien ausgelagert
-
-3. **Konfigurationsumstellung:**
-   - Migration von hartkodierten Parametern zu konfigurierbaren Werten
-   - Erstellung von Standardkonfigurationen für gängige Sensormodelle
-   - Validierung und Dokumentation der Konfigurationsoptionen
-
-4. **Anpassung der ThingsBoard-Integration:**
-   - Umstellung auf die neue Gerätestruktur
-   - Zuordnung von Messwerten zu Telemetriedaten
-   - Erweiterung der RPC-Funktionen für die neuen Gerätetypen
-
-### 5. ThingsBoard-Integration
-#### 5.1 Bestehende Implementierung (`internal/thingsboard/`)
-- **thingsboard_client.go** - Handhabt Kommunikation mit ThingsBoard-Plattform
-- MQTT-basierte Kommunikation mit der ThingsBoard-Plattform
-- Sendet Telemetriedaten von den Sensoren
-- Empfängt Shared Attributes für Konfigurationsänderungen
-- Verarbeitet RPC-Befehle für Fernsteuerung
-- Behandelt Verbindungsabbrüche und Wiederverbindung
-
-#### 5.2 Neue modulare Implementierung (`internal/thingsboardMQTT/`)
+#### 8.1 ThingsBoard MQTT Integration (`internal/integration/thingsboard/mqtt/`)
 Vollständig modulare Implementierung aller ThingsBoard MQTT-APIs:
 - **types.go** - Gemeinsame Typen und Strukturdefinitionen
 - **client.go** - Basis-Client mit Kern-Funktionalität (Verbindung, Start/Stop)
@@ -227,12 +166,12 @@ Vollständig modulare Implementierung aller ThingsBoard MQTT-APIs:
 - **provisioning.go** - Funktionen für Device Provisioning und Claiming
 - **utils.go** - Hilfsfunktionen
 
-Vorteile der neuen Implementierung:
-- Klare Trennung der Funktionalitäten in separate Module
-- Bessere Wartbarkeit und Erweiterbarkeit
-- Umfassende Fehlerbehandlung und Thread-Sicherheit
-- Vollständige Abdeckung aller ThingsBoard MQTT-APIs
-- Flexibles Konfigurations-System über Options-Pattern
+### 9. Service-Schicht (`internal/service/`)
+- **device_service.go** - Service zur Verbindung aller Komponenten
+- **monitoring/** - Dienste zur Systemüberwachung
+- **scheduler/** - Zeitplaner für wiederkehrende Aufgaben
+
+Die Service-Schicht dient als Bindeglied zwischen der Konfiguration, den Factories und den tatsächlichen Geräten. Sie ermöglicht es, die verschiedenen Komponenten des Systems lose zu koppeln und vermeidet so zirkuläre Abhängigkeiten.
 
 ## Datenfluss
 
@@ -351,7 +290,6 @@ Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abg
    - Factory-Funktionen für alle Sensortypen
 
 4. **Konfiguration:**
-   - JSON-Konfigurationsdateien für alle Sensortypen
    - Ladeprozess für Konfigurationen in der Service-Schicht
 
 5. **Modbus-Protokoll:**
@@ -363,6 +301,11 @@ Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abg
    - Integration der neuen Architektur in die Hauptanwendung abgeschlossen
    - Die neue Architektur mit dem SensorAdapter ist in der Hauptanwendung (`cmd/main.go`) implementiert
    - Die alten Implementierungen wurden entfernt
+
+7. **Projektstruktur:**
+   - Die Projektstruktur wurde gemäß dem neuen modularen Design reorganisiert
+   - Klare Trennung zwischen Geräten, Protokollen, Controllern und Integrationen
+   - ThingsBoard MQTT Client in `internal/integration/thingsboard/mqtt/` platziert
 
 Folgende Schritte sind noch offen:
 

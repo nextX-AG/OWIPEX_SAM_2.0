@@ -8,6 +8,17 @@
 - [x] Migration der bestehenden Sensoren in die neue Architektur
 - [x] Integration der neuen Architektur in die Hauptanwendung
 
+## Projektstruktur
+- [x] Reorganisation des Projekts in eine klare, modulare Struktur
+- [x] Wechsel zu einer hierarchischen Ordnerstruktur mit logischen Gruppierungen
+- [x] Verschieben des ThingsBoard MQTT Clients in die Integration-Schicht
+- [x] Dokumentation der neuen Struktur in ARCHITECTURE.md
+- [x] Anpassung und Verschiebung aller Module in die neue Struktur
+- [x] Verschieben der Hilfsskripte in den scripts-Ordner
+- [ ] Aktualisierung der Import-Pfade in allen Dateien
+- [x] Entfernen von Altlasten aus der vorherigen Projektstruktur
+- [ ] Refactoring der ThingsBoard-Integration in die neue Struktur 
+
 ## Hohe Priorität
 - [ ] RPC-Befehle von ThingsBoard empfangen und verarbeiten
 - [x] Robustes Error-Handling für Modbus-Verbindungen implementieren

@@ -29,4 +29,4 @@ echo "Starte Modbus-Reader mit /dev/ttyS0..."
 export PATH=$PATH:/usr/local/go/bin
 
 # Start des Go-Programms
-GO_READER_ENV_PATH="$(pwd)/${CONFIG_FILE}" go run cmd/main.go 
+GO_READER_ENV_PATH="$(pwd)/${CONFIG_FILE}" go run cmd/reader/main.go 

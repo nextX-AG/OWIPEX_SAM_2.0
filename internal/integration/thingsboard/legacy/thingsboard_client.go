@@ -1,4 +1,4 @@
-package thingsboard
+package legacy
 
 import (
 	"encoding/json"
