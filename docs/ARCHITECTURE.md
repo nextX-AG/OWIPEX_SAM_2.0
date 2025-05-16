@@ -148,6 +148,14 @@ Jeder Aktortyp hat seine eigene Implementierung:
 
 ### 7. Hardware-Abstraktion (`internal/hardware/`)
 - **gpio/** - Abstraktion für GPIO-Zugriff
+  - **gpio.go** - Definiert die zentrale GPIO-Schnittstelle und Typen
+  - **factory.go** - Factory für verschiedene GPIO-Implementierungen basierend auf Plattform
+  - **linux_sysfs/** - Linux sysfs-basierte GPIO-Implementierung
+  - **linux_gpiod/** - Linux libgpiod-basierte GPIO-Implementierung (moderne Methode)
+  - **mock/** - Mock-Implementierung für Tests
+  - **config.go** - GPIO-Konfigurationsstrukturen
+  - **manager.go** - Zentraler GPIO-Manager zur Verwaltung mehrerer Pins
+  - **event.go** - Event-basiertes System für Pin-Statusänderungen
 - **uart/** - Abstraktion für UART-Kommunikation
 
 ### 8. Plattform-Integration (`internal/integration/`)
@@ -195,6 +203,185 @@ Die Service-Schicht dient als Bindeglied zwischen der Konfiguration, den Factori
    - ThingsBoard sendet RPC-Befehle für Aktionen (z.B. Kalibrierung)
    - Der ThingsBoard-Client empfängt und verarbeitet diese Befehle
    - Aktionen werden ausgeführt und Ergebnisse zurück an ThingsBoard gemeldet
+
+## GPIO-Implementierung
+
+Die GPIO-Implementierung bietet eine abstrakte Schnittstelle für den Zugriff auf Hardware-Pins und unterstützt verschiedene Plattformen und Nutzungsszenarien:
+
+```
++-------------------+            +----------------------+
+| Controller-Logik  |            | Hardware-Abstraction |
+| (Aktoren, LEDs)   +----------->| (GPIO Interface)     |
++-------------------+            +----------+-----------+
+                                            |
+                                 +----------v-----------+
+                                 |    GPIO Factory       |
+                                 +----------+-----------+
+                                            |
+            +------------------------+------+-------+------------------------+
+            |                        |              |                        |
++-----------v-----------+ +----------v-----------+  |           +-----------v-----------+
+| Linux sysfs GPIO      | | Linux gpiod GPIO     |  |           | Mock GPIO (Tests)     |
+| (Legacy-Unterstützung)| | (Moderne Linux)      |  |           | (Für Testzwecke)      |
++-----------------------+ +----------------------+  |           +-----------------------+
+                                                    |
+                                          +---------v----------+
+                                          | Andere Plattformen |
+                                          | (erweiterbar)      |
+                                          +--------------------+
+```
+
+### GPIO-Interface-Design
+
+Das Kerninterface für GPIO-Operationen definiert die folgenden grundlegenden Operationen:
+
+```go
+// PinMode definiert die möglichen Modi eines GPIO-Pins
+type PinMode int
+
+const (
+    Input PinMode = iota
+    Output
+    InputPullUp
+    InputPullDown
+)
+
+// Edge definiert Trigger-Events für GPIO-Pins
+type Edge int
+
+const (
+    None Edge = iota
+    Rising
+    Falling
+    Both
+)
+
+// Pin repräsentiert einen einzelnen GPIO-Pin
+type Pin interface {
+    // Grundlegende Operationen
+    Read() (bool, error)              // Liest den aktuellen Zustand des Pins
+    Write(value bool) error           // Setzt den Pin auf high (true) oder low (false)
+    SetMode(mode PinMode) error       // Ändert den Modus des Pins
+    SetEdge(edge Edge) error          // Ändert die Trigger-Bedingung für Events
+    Close() error                     // Gibt Ressourcen frei
+    
+    // Eigenschaften
+    Number() int                      // Gibt die Pin-Nummer zurück
+    Name() string                     // Gibt den Namen des Pins zurück
+    Mode() PinMode                    // Gibt den aktuellen Modus zurück
+    
+    // Event-basierte Funktionen
+    RegisterCallback(func(bool)) error  // Registriert Callback für Statusänderungen
+    EnableInterrupt() error           // Aktiviert Interrupts
+    DisableInterrupt() error          // Deaktiviert Interrupts
+}
+
+// Manager ist verantwortlich für die Verwaltung mehrerer GPIO-Pins
+type Manager interface {
+    // Pin-Verwaltung
+    OpenPin(pinNumber int, mode PinMode) (Pin, error)
+    ClosePin(pinNumber int) error
+    CloseAll() error
+    
+    // Pin-Lookup
+    GetPin(pinNumber int) (Pin, bool)
+    GetPinByName(name string) (Pin, bool)
+    
+    // Konfiguration
+    LoadConfig(configFile string) error
+    AddPinAlias(number int, name string) error
+}
+```
+
+### Plattformspezifische Implementierungen
+
+#### Linux sysfs GPIO
+
+Diese Implementierung nutzt das traditionelle sysfs-Interface (`/sys/class/gpio/`) für den Zugriff auf GPIO-Pins. Sie ist kompatibel mit älteren Linux-Systemen, wird aber in neueren Kerneln als veraltet angesehen.
+
+Features:
+- Kompatibilität mit älteren Linux-Versionen
+- Einfaches Polling von Pin-Zuständen
+- Interrupt-Unterstützung über epoll
+
+#### Linux gpiod GPIO
+
+Diese Implementierung nutzt die moderne libgpiod-Bibliothek für den Zugriff auf GPIO-Pins. Sie ist die empfohlene Methode für neuere Linux-Systeme (Kernel 4.8+) und bietet verbesserte Funktionalität und Leistung.
+
+Features:
+- Thread-safe Zugriff auf GPIO-Pins
+- Effiziente Event-Handling-Mechanismen
+- Konsumententracking und Pin-Eigentümerschaft
+- Support für Bulk-Operationen
+- Verbesserte Leistung gegenüber sysfs
+
+#### Mock GPIO
+
+Eine simulierte GPIO-Implementierung für Testzwecke:
+- Erlaubt Tests ohne physische Hardware
+- Simuliert Pin-Zustände und Ereignisse
+- Beinhaltet Werkzeuge zum Testen von Timing und Edge-Erkennung
+
+### GPIO-Konfiguration
+
+Die GPIO-Pins werden über eine JSON-Konfigurationsdatei definiert:
+
+```json
+{
+  "pins": [
+    {
+      "number": 17,
+      "name": "pump_relay",
+      "mode": "output",
+      "initial_state": false,
+      "description": "Relais für die Hauptpumpe"
+    },
+    {
+      "number": 18,
+      "name": "co2_relay",
+      "mode": "output",
+      "initial_state": false,
+      "description": "Relais für das CO2-Ventil"
+    },
+    {
+      "number": 27,
+      "name": "status_led_red",
+      "mode": "output",
+      "initial_state": false,
+      "description": "Rote Status-LED"
+    },
+    {
+      "number": 9,
+      "name": "power_button",
+      "mode": "input_pullup",
+      "edge": "falling",
+      "debounce_ms": 50,
+      "description": "Power/Mode-Knopf"
+    }
+  ]
+}
+```
+
+### Integration mit Geräten und Controllern
+
+Die GPIO-Implementierung bildet die Grundlage für:
+
+1. **Relais-Steuerung**:
+   - Wasseraufbereitungssystem-Steuerung
+   - CO2-Ventilsteuerung
+   - Heizungssteuerung
+
+2. **Statusanzeige**:
+   - RGB-LED zur Systemstatusanzeige
+   - Fehlerzustände und Betriebsmodi
+
+3. **Benutzereingabe**:
+   - Knöpfe für manuelle Steuerung
+   - Modus-Auswahl und Reset-Funktionen
+
+4. **Watchdog-Funktionalität**:
+   - Überwachung des Systemzustands
+   - Automatischer Neustart bei Hängern
 
 ## Fehlerbehandlung
 

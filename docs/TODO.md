@@ -78,6 +78,19 @@
 - [ ] Aktor-Steuerung über Shared Attributes implementieren
 - [ ] Aktor-Status-Rückmeldung an ThingsBoard
 
+## GPIO-Implementierung
+- [ ] Abstrakte GPIO-Schnittstelle definieren
+- [ ] Plattformspezifische Implementierungen:
+  - [ ] Linux-GPIO (sysfs) implementieren
+  - [ ] Linux-GPIO (gpiod) implementieren
+  - [ ] Mock-GPIO für Tests implementieren
+- [ ] Input-Handling mit Debouncing für Buttons
+- [ ] Output-Handling für LEDs und Relais
+- [ ] Event-basierte GPIO-Überwachung
+- [ ] Konfiguration von GPIO-Pins über JSON
+- [ ] Integration der GPIO-Funktionalität mit Aktoren
+- [ ] Watchdog-Funktionalität aus der alten Implementierung portieren
+
 ## ThingsBoard-Integration
 - [ ] Verbesserter Umgang mit Shared Attributes
 - [ ] RPC-Kommandos für alle Sensoren implementieren
