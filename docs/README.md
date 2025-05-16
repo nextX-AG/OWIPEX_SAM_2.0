@@ -6,6 +6,7 @@ Dieses Verzeichnis enthält die Dokumentation für das OWIPEX RS485 Go-Projekt.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Eine detaillierte Beschreibung der Systemarchitektur, Komponenten und Datenflüsse
 - [TODO.md](TODO.md) - Eine Liste von offenen und abgeschlossenen Aufgaben im Projekt
+- [oldSystemRefference/](oldSystemRefference/) - Referenz des ursprünglichen Python-Systems, wichtig für das Verständnis der Migration und der Anforderungen
 
 ## Weitere Dokumentation
 
