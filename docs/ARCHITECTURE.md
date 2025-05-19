@@ -1,3 +1,5 @@
+<!-- Version: 0.1.3 | Last Updated: 2025-05-19 14:04:58 UTC -->
+
 # owipexRS485GO - Systemarchitektur
 
 ## Übersicht
@@ -160,17 +162,17 @@ Die Geräte-Architektur verwendet eine mehrstufige Abstraktion, die Sensortypen,
   - `Sensor` - Spezialisiertes Interface für Sensoren
   - `Actor` - Spezialisiertes Interface für Aktoren
   - `HybridDevice` - Interface für Geräte, die lesen und schreiben können
-- **device/registry.go** - Zentrales Register für alle verfügbaren Geräte
-- **device/factory.go** - Factory-Pattern für die Geräteerstellung
-- **device/loader.go** - Funktionen zum Laden von Gerätekonfigurationen
+- **device/device_registry.go** - Zentrales Register für alle verfügbaren Geräte
+- **device/device_factory.go** - Factory-Pattern für die Geräteerstellung
+- **device/device_loader.go** - Funktionen zum Laden von Gerätekonfigurationen
 
 #### 5.2 Sensortypen (`internal/device/sensor/`)
 Jeder Sensortyp hat seine eigene Implementierung mit einer gemeinsamen Basisklasse:
 - **sensor/base.go** - Gemeinsame Basisfunktionalität für alle Sensoren
-- **sensor/ph/ph_sensor.go** - pH-Sensor-Implementierung
-- **sensor/flow/** - Implementierungen für Durchflusssensoren
-- **sensor/radar/** - Implementierungen für Radar-Füllstandsensoren
-- **sensor/turbidity/** - Implementierungen für Trübungssensoren
+- **sensor/ph/ph_sensor.go** - pH-Sensor-Implementierung (konsistente Benennung)
+- **sensor/flow/flow_sensor.go** - Implementierung für Durchflusssensoren
+- **sensor/radar/radar_sensor.go** - Implementierung für Radar-Füllstandsensoren
+- **sensor/turbidity/turbidity_sensor.go** - Implementierung für Trübungssensoren
 
 #### 5.3 Aktortypen (`internal/device/actuator/`)
 Jeder Aktortyp hat seine eigene Implementierung:
@@ -1053,24 +1055,30 @@ Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abg
 1. **Zentrale Typen und Interfaces:**
    - Vollständige Implementierung der Basisinterfaces in `internal/types/`
    - Interface-Definitionen für Geräte, Sensoren und Protokolle
+   - Zentralisierung gemeinsamer Typen zur Vermeidung von Duplizierung
 
 2. **Basiskomponenten:**
    - Geräteregistry und Factory in `internal/device/`
    - Sensor-Basis in `internal/device/sensor/base.go`
    - Protokoll-Handler-Interface und Modbus-Implementierung
+   - Einheitliche Namenskonventionen (`device_registry.go`, `device_factory.go`, etc.)
 
 3. **Sensor-Typen:**
    - Migration aller Sensor-Typen abgeschlossen (pH, Flow, Radar, Turbidity)
    - Spezifische Implementierungen in eigenen Paketen
    - Factory-Funktionen für alle Sensortypen
+   - Eindeutige Dateinamen (`ph_sensor.go`, `ph_sensor_factory.go`, etc.)
+   - Konsistente Benennung (`PhSensor` statt `PHSensor`)
 
 4. **Konfiguration:**
    - Ladeprozess für Konfigurationen in der Service-Schicht
 
 5. **Modbus-Protokoll:**
-   - Neue implementierung `internal/protocol/modbus/` ersetzt die alte vollständig
+   - Neue Implementierung `internal/protocol/modbus/` ersetzt die alte vollständig
    - Vollständig konfigurierbar über JSON
    - Unterstützt alle benötigten Register-Typen und Datenformate
+   - Zentralisierte Typendefinitionen in `types/protocol.go`
+   - Spezifische Dateinamen (`modbus_client.go`, `modbus_dto.go`, etc.)
 
 6. **Hauptanwendung:**
    - Integration der neuen Architektur in die Hauptanwendung abgeschlossen
@@ -1081,6 +1089,7 @@ Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abg
    - Die Projektstruktur wurde gemäß dem neuen modularen Design reorganisiert
    - Klare Trennung zwischen Geräten, Protokollen, Controllern und Integrationen
    - ThingsBoard MQTT Client in `internal/integration/thingsboard/mqtt/` platziert
+   - Konsistente Dateinamen in allen Komponenten
 
 8. **Redis-Integration:**
    - Implementation der Redis-Client-Komponente abgeschlossen
@@ -1098,6 +1107,13 @@ Die Migration von der alten zur neuen Architektur ist in folgenden Bereichen abg
    - Thread-sichere Client-Implementierung für alle Module
    - Optimierte Topic-Struktur und Topic-Matching
    - Zustandspersistenz über retained Messages in Redis
+
+10. **Namenskonventionen und Code-Organisation:**
+    - Einführung einheitlicher Namenskonventionen
+    - Vermeidung generischer Dateinamen zugunsten spezifischer Namen
+    - Zentralisierung von Typendefinitionen
+    - Konsistente DTO-Strukturen und -Namensgebung
+    - Verbesserte Lesbarkeit und Wartbarkeit des Codes
 
 Folgende Schritte sind noch offen:
 
@@ -1117,3 +1133,18 @@ Folgende Schritte sind noch offen:
    - Integration weiterer gmqtt-Plugins für erweiterte Funktionalität
    - Entwicklung von spezialisierten MQTT-Clients für spezifische Anwendungsfälle
    - Implementierung von fortschrittlichen Monitoring-Werkzeugen für den MQTT-Broker
+
+## Namenskonventionen und Code-Organisation
+
+Um eine konsistente und verständliche Codebasis zu gewährleisten, wurden umfangreiche Coding-Konventionen definiert. Diese sind in einem separaten Dokument [CODING_CONVENTIONS.md](CODING_CONVENTIONS.md) ausführlich dokumentiert.
+
+Die wichtigsten Punkte in Kürze:
+
+- **Eindeutige Dateinamen**: Spezifische Namen statt generischer wie `factory.go`
+- **Konsistente Benennung**: CamelCase für Typen, Vermeidung von Abkürzungen
+- **Zentrale Typdefinitionen**: Gemeinsame Typen in `internal/types/` definieren
+- **DTO-Muster**: Klare Konventionen für Datenübertragungsobjekte
+
+Diese Coding-Konventionen werden in allen Komponenten des Systems angewendet, um die Codebasis konsistent und wartbar zu halten.
+
+## Zentrale Typen und Interfaces

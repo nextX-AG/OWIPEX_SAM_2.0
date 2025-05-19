@@ -1,0 +1,36 @@
+name: Update Docs Version
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+    branches:
+      - main
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Generate Docs Changelog
+        run: |
+          # Hole aktuelle Version
+          version=$(cat docs/VERSION.txt)
+          
+          # Generiere Changelog seit letztem Tag
+          echo "# Dokumentations-Changelog" > docs/CHANGELOG.md
+          echo "## Version $version - $(date +"%Y-%m-%d")" >> docs/CHANGELOG.md
+          echo "" >> docs/CHANGELOG.md
+          
+          # Füge geänderte Dateien mit Commits hinzu
+          git log --name-status --pretty=format:"%h %s" HEAD~10..HEAD -- docs/ | grep -v "^$" | grep -v "Update VERSION" >> docs/CHANGELOG.md
+          
+          # Committe Änderungen
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/CHANGELOG.md
+          git commit -m "Update docs changelog [skip ci]"
+          git push 
