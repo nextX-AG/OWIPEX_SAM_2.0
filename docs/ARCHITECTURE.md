@@ -1,14 +1,15 @@
-<!-- Version: 0.1.3 | Last Updated: 2025-05-19 14:04:58 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
 
-# owipexRS485GO - Systemarchitektur
+
+# OWIPEX_SAM_2.0 - Systemarchitektur
 
 ## Übersicht
 
-Das owipexRS485GO-System ist eine in Go implementierte Kommunikationsbrücke zwischen Wasseraufbereitungssensoren (über RS485/Modbus) und der ThingsBoard IoT-Plattform. Die Anwendung wurde von einem Python-Projekt portiert, um die Stabilität, Leistung und Zuverlässigkeit zu verbessern.
+Das OWIPEX_SAM_2.0-System ist eine in Go implementierte Kommunikationsbrücke zwischen Wasseraufbereitungssensoren (über RS485/Modbus) und der ThingsBoard IoT-Plattform. Die Anwendung wurde von einem Python-Projekt portiert, um die Stabilität, Leistung und Zuverlässigkeit zu verbessern.
 
 ```
 +----------------+        +-------------------+        +-----------------+        +-----------------+
-| Sensoren       |        | owipexRS485GO     |        | Redis Cache     |        | ThingsBoard     |
+| Sensoren       |        | OWIPEX_SAM_2.0     |        | Redis Cache     |        | ThingsBoard     |
 | (RS485/Modbus) | <----> | (Go Application)  | <----> | (Datenpuffer)   | <----> | (IoT Platform)  |
 +----------------+        +-------------------+        +-----------------+        +-----------------+
                                     ^                          ^
@@ -39,7 +40,7 @@ Diese Architektur sorgt für:
 Die Projekt-Ordnerstruktur wurde vollständig überarbeitet, um eine modulare und wartbare Codebasis zu schaffen:
 
 ```
-owipexRS485GO/
+OWIPEX_SAM_2.0/
 ├── cmd/                      # Ausführbare Anwendungen
 │   ├── reader/               # Hauptanwendung
 │   └── tools/                # Hilfswerkzeuge, Tests, etc.
@@ -267,7 +268,7 @@ Für die interne Kommunikation zwischen den Modulen wird ein eingebetteter MQTT-
 
 ```
 +----------------+        +------------------------+        +-----------------+
-| Sensoren       |        | owipexRS485GO          |        | ThingsBoard     |
+| Sensoren       |        | OWIPEX_SAM_2.0          |        | ThingsBoard     |
 | (RS485/Modbus) | <----> | +-----------------+    | <----> | (IoT Platform)  |
 +----------------+        | | Eingebetteter    |    |        +-----------------+
                           | | MQTT-Broker      |    |
@@ -809,7 +810,7 @@ Die Anwendung nutzt Redis als robuste Zwischenspeicherlösung für Sensordaten, 
 
 ```
 +----------------+        +-------------------+        +-----------------+        +-----------------+
-| Sensoren       |        | owipexRS485GO     |        | Redis Cache     |        | ThingsBoard     |
+| Sensoren       |        | OWIPEX_SAM_2.0     |        | Redis Cache     |        | ThingsBoard     |
 | (RS485/Modbus) | <----> | (Go Application)  | <----> | (Datenpuffer)   | <----> | (IoT Platform)  |
 +----------------+        +-------------------+        +-----------------+        +-----------------+
                                     ^                          ^

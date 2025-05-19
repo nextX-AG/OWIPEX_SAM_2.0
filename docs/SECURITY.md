@@ -1,10 +1,11 @@
-<!-- Version: 0.1.4 | Last Updated: 2025-05-19 14:41:32 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
 
-# Sicherheitskonzept: owipexRS485GO
+
+# Sicherheitskonzept: OWIPEX_SAM_2.0
 
 ## Übersicht
 
-Dieses Dokument beschreibt das Sicherheitskonzept des owipexRS485GO-Systems, mit einem Fokus auf Datenschutz, Kommunikationssicherheit, Zugriffskontrollen und Systemintegrität. Die hier beschriebenen Maßnahmen gewährleisten den sicheren Betrieb des Systems in industriellen Umgebungen.
+Dieses Dokument beschreibt das Sicherheitskonzept des OWIPEX_SAM_2.0-Systems, mit einem Fokus auf Datenschutz, Kommunikationssicherheit, Zugriffskontrollen und Systemintegrität. Die hier beschriebenen Maßnahmen gewährleisten den sicheren Betrieb des Systems in industriellen Umgebungen.
 
 ## Sicherheitsarchitektur
 

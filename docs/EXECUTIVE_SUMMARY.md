@@ -1,10 +1,11 @@
-<!-- Version: 0.1.4 | Last Updated: 2025-05-19 14:41:32 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
 
-# Executive Summary: owipexRS485GO
+
+# Executive Summary: OWIPEX_SAM_2.0
 
 ## Überblick: Moderne IoT-Architektur für die Wasseraufbereitung
 
-Die owipexRS485GO-Plattform ist eine hochmoderne, skalierbare Softwarelösung für die Überwachung und Steuerung von industriellen Wasseraufbereitungsanlagen. Sie verbindet Industrie-Sensoren nahtlos mit der Cloud und ermöglicht Echtzeitüberwachung, Datenanalyse und Fernsteuerung.
+Die OWIPEX_SAM_2.0-Plattform ist eine hochmoderne, skalierbare Softwarelösung für die Überwachung und Steuerung von industriellen Wasseraufbereitungsanlagen. Sie verbindet Industrie-Sensoren nahtlos mit der Cloud und ermöglicht Echtzeitüberwachung, Datenanalyse und Fernsteuerung.
 
 ## Geschäftlicher Nutzen
 
@@ -34,7 +35,7 @@ Die owipexRS485GO-Plattform ist eine hochmoderne, skalierbare Softwarelösung f�
 
 Die Lösung besteht aus drei Hauptkomponenten:
 
-1. **Edge-Komponente (owipexRS485GO)**:
+1. **Edge-Komponente (OWIPEX_SAM_2.0)**:
    - Kommuniziert direkt mit den Industrie-Sensoren
    - Puffert Daten bei Verbindungsausfällen
    - Verarbeitet und validiert Messwerte lokal
@@ -72,7 +73,7 @@ Die Lösung besteht aus drei Hauptkomponenten:
 
 ## ROI-Betrachtung
 
-Die Investition in die owipexRS485GO-Plattform amortisiert sich typischerweise innerhalb von 12-18 Monaten durch:
+Die Investition in die OWIPEX_SAM_2.0-Plattform amortisiert sich typischerweise innerhalb von 12-18 Monaten durch:
 
 - **Kostenreduktion**: ~30% weniger Wartungseinsätze durch Ferndiagnose
 - **Effizienzsteigerung**: ~15% Optimierung bei Chemikalien- und Energieverbrauch
@@ -86,7 +87,7 @@ Typische Rentabilitätsberechnung für eine mittelgroße Anlage:
 
 ## Empfehlung
 
-Die owipexRS485GO-Plattform stellt eine strategische Investition in die Digitalisierung und Optimierung von Wasseraufbereitungsprozessen dar. Die moderne, zukunftssichere Architektur bietet sowohl unmittelbare betriebliche Vorteile als auch langfristige Wettbewerbsvorteile durch:
+Die OWIPEX_SAM_2.0-Plattform stellt eine strategische Investition in die Digitalisierung und Optimierung von Wasseraufbereitungsprozessen dar. Die moderne, zukunftssichere Architektur bietet sowohl unmittelbare betriebliche Vorteile als auch langfristige Wettbewerbsvorteile durch:
 
 - Höhere Anlagenverfügbarkeit
 - Reduzierte Betriebskosten

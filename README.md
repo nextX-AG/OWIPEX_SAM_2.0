@@ -1,10 +1,10 @@
-# OWIPEX RS485 Go
+# OWIPEX SAM 2.0
 
 Eine Go-Implementierung für die Kommunikation zwischen Wasseraufbereitungssensoren (über RS485/Modbus) und der ThingsBoard IoT-Plattform.
 
 ## Übersicht
 
-Das owipexRS485GO-System dient als Kommunikationsbrücke zwischen:
+Das OWIPEX_SAM_2.0-System dient als Kommunikationsbrücke zwischen:
 - Sensoren (pH, Durchfluss, Radar, Trübung) über RS485/Modbus
 - ThingsBoard IoT-Plattform für Datenvisualisierung und -steuerung
 

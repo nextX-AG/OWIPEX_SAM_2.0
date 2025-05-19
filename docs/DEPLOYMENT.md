@@ -1,10 +1,11 @@
-<!-- Version: 0.1.4 | Last Updated: 2025-05-19 14:41:32 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
+
 
 # Deployment und CI/CD-Prozess
 
 ## Übersicht
 
-Dieses Dokument beschreibt den Entwicklungs-, Build-, Test- und Deployment-Prozess für das owipexRS485GO-System. Es definiert die Branching-Strategie, CI/CD-Pipeline und die Best Practices für Releases und Rollbacks.
+Dieses Dokument beschreibt den Entwicklungs-, Build-, Test- und Deployment-Prozess für das OWIPEX_SAM_2.0-System. Es definiert die Branching-Strategie, CI/CD-Pipeline und die Best Practices für Releases und Rollbacks.
 
 ## Branching-Strategie und Git-Workflow
 
@@ -239,7 +240,7 @@ Für Linux-basierte Deployments verwenden wir systemd-Services:
 
 ```ini
 [Unit]
-Description=owipexRS485GO - Modbus/MQTT Bridge for Water Treatment
+Description=OWIPEX_SAM_2.0 - Modbus/MQTT Bridge for Water Treatment
 After=network.target redis.service
 Wants=redis.service
 
@@ -248,7 +249,7 @@ Type=simple
 User=owipex
 Group=owipex
 WorkingDirectory=/opt/owipex/rs485go
-ExecStart=/opt/owipex/rs485go/bin/owipexRS485GO --config /etc/owipex/config.json
+ExecStart=/opt/owipex/rs485go/bin/OWIPEX_SAM_2.0 --config /etc/owipex/config.json
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -290,8 +291,8 @@ sudo systemctl enable owipexrs485go.service
 
 1. Repository klonen:
    ```bash
-   git clone https://github.com/KARIM-Technologies/owipexRS485GO.git
-   cd owipexRS485GO
+   git clone https://github.com/KARIM-Technologies/OWIPEX_SAM_2.0.git
+   cd OWIPEX_SAM_2.0
    ```
 
 2. Branch für neue Funktion erstellen:

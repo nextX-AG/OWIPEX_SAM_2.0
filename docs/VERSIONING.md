@@ -1,10 +1,11 @@
-<!-- Version: 0.1.2 | Last Updated: 2025-05-19 14:01:27 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
+
 
 # Dokumentations-Versionierungssystem
 
 ## Übersicht
 
-Dieses Dokument beschreibt das automatische Versionierungssystem für die Dokumentation des owipexRS485GO-Projekts. Das System ist darauf ausgelegt, ohne manuelle Eingriffe zu funktionieren und eine konsistente Versionierung aller Dokumentationsdateien sicherzustellen.
+Dieses Dokument beschreibt das automatische Versionierungssystem für die Dokumentation des OWIPEX_SAM_2.0-Projekts. Das System ist darauf ausgelegt, ohne manuelle Eingriffe zu funktionieren und eine konsistente Versionierung aller Dokumentationsdateien sicherzustellen.
 
 ## Versionierungskonzept
 

@@ -1,6 +1,7 @@
-<!-- Version: 0.1.2 | Last Updated: 2025-05-19 14:01:27 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
 
-# owipexRS485GO - Task List
+
+# OWIPEX_SAM_2.0 - Task List
 
 ## In Bearbeitung
 - [x] Minimalen ThingsBoard-Client für Tests implementieren
@@ -120,6 +121,23 @@
   - [x] CI/CD-Workflow für automatisches Changelog konfigurieren
   - [x] VERSIONING.md mit Beschreibung des Versionierungssystems erstellen
   - [x] Integration des Versionssystems in bestehende Dokumentationsdateien
+- [ ] Management-Summary für Entscheidungsträger erstellen:
+  - [ ] EXECUTIVE_SUMMARY.md erstellen mit Business-fokussierter Übersicht
+  - [ ] Infografik zur Gesamtarchitektur für Nicht-Techniker
+  - [ ] Erstellung einer Nutzen- und ROI-Übersicht
+  - [ ] Timeline und wichtigste Meilensteine visualisieren
+- [ ] Sicherheitskonzept dokumentieren:
+  - [ ] Erweitertes Security-Kapitel in ARCHITECTURE.md hinzufügen
+  - [ ] Authentifizierungskonzept für alle Schnittstellen definieren
+  - [ ] Verschlüsselungsstrategien für Daten beschreiben
+  - [ ] Zertifikatsmanagement für TLS/MQTT/Redis dokumentieren
+  - [ ] Absicherungsmaßnahmen gegen IoT-Angriffsvektoren beschreiben
+- [ ] CI/CD und Deployment-Prozess dokumentieren:
+  - [ ] Branching-Strategie und Git-Workflow definieren
+  - [ ] Testphasen und -stufen dokumentieren
+  - [ ] Deployment-Pipeline mit Stages beschreiben
+  - [ ] Rollback-Strategien und Notfallmaßnahmen definieren
+  - [ ] Monitoring nach Deployment dokumentieren
 
 ## Testing
 - [ ] Umfassende Tests für Modbus-Kommunikation

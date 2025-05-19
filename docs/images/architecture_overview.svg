@@ -5,16 +5,16 @@
   
   <!-- Titel -->
   <text x="400" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#333">
-    owipexRS485GO Systemarchitektur
+    OWIPEX_SAM_2.0 Systemarchitektur
   </text>
   
-  <!-- Edge Layer (owipexRS485GO) -->
+  <!-- Edge Layer (OWIPEX_SAM_2.0) -->
   <rect x="50" y="100" width="200" height="280" rx="10" ry="10" fill="#e1f5fe" stroke="#0288d1" stroke-width="2" />
   <text x="150" y="130" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#0288d1">
     Edge Layer
   </text>
   <text x="150" y="155" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">
-    (owipexRS485GO)
+    (OWIPEX_SAM_2.0)
   </text>
   
   <!-- Edge Components -->

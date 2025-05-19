@@ -1,8 +1,9 @@
-<!-- Version: 0.1.3 | Last Updated: 2025-05-19 14:04:58 UTC -->
+<!-- Version: 0.1.6 | Last Updated: 2025-05-19 14:54:14 UTC -->
 
-# Coding-Konventionen für owipexRS485GO
 
-Dieses Dokument definiert die einheitlichen Coding-Konventionen für das owipexRS485GO-Projekt. Durch die Einhaltung dieser Standards wird die Codebasis konsistenter, lesbarer und wartbarer.
+# Coding-Konventionen für OWIPEX_SAM_2.0
+
+Dieses Dokument definiert die einheitlichen Coding-Konventionen für das OWIPEX_SAM_2.0-Projekt. Durch die Einhaltung dieser Standards wird die Codebasis konsistenter, lesbarer und wartbarer.
 
 ## Namenskonventionen
 
@@ -157,8 +158,8 @@ import (
     "github.com/go-redis/redis/v8"
     "github.com/DrmagicE/gmqtt"
     
-    "github.com/owipex/owipexRS485GO/internal/types"
-    "github.com/owipex/owipexRS485GO/internal/config"
+    "github.com/owipex/OWIPEX_SAM_2.0/internal/types"
+    "github.com/owipex/OWIPEX_SAM_2.0/internal/config"
 )
 ```
 
