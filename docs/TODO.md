@@ -1,3 +1,5 @@
+<!-- Version: 0.1.2 | Last Updated: 2025-05-19 14:01:27 UTC -->
+
 # owipexRS485GO - Task List
 
 ## In Bearbeitung
@@ -112,6 +114,12 @@
 - [ ] Konfigurationsoptionen dokumentieren
 - [ ] ThingsBoard-Setup-Anleitung schreiben
 - [ ] PROZESS_WORKFLOW.md für Systemabläufe erstellen
+- [x] Automatisches Versionierungssystem für Dokumentation implementieren:
+  - [x] VERSION.txt für zentrale Dokumentationsversion erstellen
+  - [x] Git pre-commit Hook für automatische Versionierung einrichten
+  - [x] CI/CD-Workflow für automatisches Changelog konfigurieren
+  - [x] VERSIONING.md mit Beschreibung des Versionierungssystems erstellen
+  - [x] Integration des Versionssystems in bestehende Dokumentationsdateien
 
 ## Testing
 - [ ] Umfassende Tests für Modbus-Kommunikation
